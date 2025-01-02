@@ -1,0 +1,23 @@
+:has(.loading),
+:has(.loadingStopped) {
+	overflow: hidden;
+}
+
+.loading,
+.loadingStopped {
+	width: 75%;
+	margin: auto;
+}
+
+.loading {
+	animation: spin 1s infinite ease;
+}
+
+@keyframes spin {
+	0% {
+		rotate: 0;
+	}
+	100% {
+		rotate: 360deg;
+	}
+}
