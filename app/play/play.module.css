@@ -1,0 +1,66 @@
+.game {
+	display: flex;
+	flex-direction: column;
+	min-height: 100svh;
+	padding: 8px;
+}
+
+.chat {
+	background: var(--background-2);
+	max-width: calc(min(50ch, 100%));
+	width: calc(min(50ch, 100%));
+	border: dotted var(--foreground) 4px;
+	border-radius: 16px;
+	padding: 8px;
+	margin: auto;
+	margin-top: 8px;
+}
+
+.chatMessages {
+	border: solid var(--foreground) 1px;
+	border-radius: 4px;
+	padding: 4px;
+	max-height: 10rem;
+	height: 10rem;
+	overflow-y: auto;
+}
+
+.chatInput {
+	margin-top: 8px;
+	display: flex;
+	gap: 8px;
+	min-width: 100%;
+}
+
+.chatInput > input {
+	flex: 1;
+	font-size: 1rem;
+	background: var(--background);
+	border: solid var(--foreground) 1px;
+	border-radius: 4px;
+	padding: 4px;
+	min-width: 5ch;
+	width: 30ch;
+}
+
+.chatInput > button {
+	font-size: 1rem;
+	width: 10ch;
+}
+
+.board {
+	margin: auto;
+}
+
+.tile {
+	width: 4rem;
+	height: 4rem;
+}
+
+.tile.dark {
+	background: var(--button-hover-light);
+}
+
+.tile.light {
+	background: var(--background-2-light);
+}

@@ -17,7 +17,7 @@ export default function Home() {
 			<div className="grow" />
 			<button
 				onClick={() => {
-					router.push("/find_match");
+					router.push("/play");
 				}}
 			>
 				play
