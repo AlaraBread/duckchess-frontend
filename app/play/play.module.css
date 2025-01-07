@@ -52,9 +52,14 @@
 	margin: auto;
 }
 
+.board tr {
+	line-height: 0;
+}
+
 .tile {
-	width: 4rem;
-	height: 4rem;
+	height: 80px;
+	width: 80px;
+	padding: 0;
 }
 
 .tile.dark {
@@ -63,4 +68,13 @@
 
 .tile.light {
 	background: var(--background-2-light);
+}
+
+.tile img {
+	width: 100%;
+	height: 100%;
+}
+
+.moveTarget {
+	background: red;
 }

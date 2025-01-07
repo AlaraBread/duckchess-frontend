@@ -14,7 +14,7 @@ export type PieceType =
 
 export interface Piece {
 	pieceType: PieceType;
-	owner: number;
+	owner: Player;
 }
 
 export interface Tile {
@@ -22,23 +22,45 @@ export interface Tile {
 	piece: Piece | undefined;
 }
 
+export interface Board {
+	turn: Player;
+	whitePlayer: number;
+	blackPlayer: number;
+	board: Tile[][];
+}
+
 export interface GameData {
 	players: Set<number>;
 	listeningPlayers: Set<number>;
-	board: Tile[][];
-	started: boolean;
+	board: Board | null;
 	chat: string[];
 }
 
+export type Player = "white" | "black";
+
+export interface Move {
+	moveType: MoveType;
+	from: [number, number];
+	to: [number, number];
+}
+
+type MoveType = "jumpingMove" | "slidingMove";
+
 type WebsocketEvent =
+	| { type: "selfInfo"; id: number }
 	| { type: "playerAdded"; id: number }
 	| { type: "playerRemoved"; id: number }
 	| { type: "playerJoined"; id: number }
 	| { type: "playerLeft"; id: number }
-	| { type: "turn" }
-	| { type: "chatMessage"; id: number; message: string }
+	| { type: "move"; m: Move }
 	| { type: "gameState"; state: GameData }
-	| { type: "start" };
+	| {
+			type: "turnStart";
+			turn: Player;
+			movePieces: [number, number][];
+			moves: [number, number][][];
+	  }
+	| { type: "chatMessage"; id: number; message: string };
 
 export function useMatch() {
 	const findMatch = useMutation({
@@ -57,7 +79,14 @@ export function useMatch() {
 		}
 	}, [hasFired, findMatch]);
 	const [gameData, setGameData] = useState<GameData | undefined>(undefined);
-	const [websocketError, setWebsocketError] = useState<Event | undefined>(
+	const [ownId, setOwnId] = useState<number | undefined>(undefined);
+	const [turn, setTurn] = useState<Player>("white");
+	const [moves, setMoves] = useState<
+		{ pieces: [number, number][]; moves: [number, number][][] } | undefined
+	>(undefined);
+	const player: Player =
+		ownId == gameData?.board?.whitePlayer ? "white" : "black";
+	const [websocketError, setWebsocketError] = useState<string | undefined>(
 		undefined,
 	);
 	const { sendJsonMessage } = useWebSocket(
@@ -66,11 +95,22 @@ export function useMatch() {
 			onOpen: () => {
 				setWebsocketError(undefined);
 			},
+			onClose: (event) => {
+				setWebsocketError(event.reason);
+				setGameData(undefined);
+				setTurn("white");
+				setMoves(undefined);
+			},
 			onError: (error) => {
-				setWebsocketError(error);
+				console.log("websocket error: ", error);
+				setWebsocketError("websocket error");
+				setGameData(undefined);
+				setTurn("white");
+				setMoves(undefined);
 			},
 			onMessage: (event) => {
 				const data: WebsocketEvent = JSON.parse(event.data);
+				console.log(data);
 				switch (data.type) {
 					case "gameState":
 						data.state.listeningPlayers = new Set(
@@ -79,6 +119,9 @@ export function useMatch() {
 						data.state.players = new Set(data.state.players);
 						data.state.chat = [];
 						setGameData(data.state);
+						break;
+					case "selfInfo":
+						setOwnId(data.id);
 						break;
 					case "playerAdded":
 						if (gameData != undefined) {
@@ -104,14 +147,27 @@ export function useMatch() {
 							setGameData({ ...gameData });
 						}
 						break;
-					case "start":
-						if (gameData != undefined) {
-							gameData.started = true;
+					case "turnStart":
+						if (player == data.turn) {
+							setMoves({
+								moves: data.moves,
+								pieces: data.movePieces,
+							});
+						} else {
+							setMoves(undefined);
+						}
+						setTurn(data.turn);
+						break;
+					case "move":
+						if (gameData && gameData.board) {
+							const from = data.m.from;
+							const to = data.m.to;
+							gameData.board.board[to[1]][to[0]].piece =
+								gameData.board.board[from[1]][from[0]].piece;
+							gameData.board.board[from[1]][from[0]].piece =
+								undefined;
 							setGameData({ ...gameData });
 						}
-						break;
-					case "turn":
-						// todo: update game state after turn
 						break;
 					case "chatMessage":
 						if (gameData != undefined) {
@@ -132,10 +188,16 @@ export function useMatch() {
 	return {
 		findMatch: findMatch.mutate,
 		gameId,
-		error: findMatch.error || websocketError,
+		error: findMatch.error?.message || websocketError,
 		gameData: gameData,
 		sendChatMessage: (message: string) => {
 			sendJsonMessage({ type: "chatMessage", message });
 		},
+		moves,
+		sendTurn: (pieceIdx: number, moveIdx: number) => {
+			sendJsonMessage({ type: "turn", pieceIdx, moveIdx });
+		},
+		player,
+		turn,
 	};
 }
