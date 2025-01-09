@@ -36,7 +36,7 @@ export default function Play() {
 			sendTurn={sendTurn}
 			sendChatMessage={sendChatMessage}
 			player={player}
-			turn={turn}
+			turn={turn ?? "white"}
 		/>
 	);
 }
@@ -62,6 +62,7 @@ function Matchmaking(props: {
 					/>
 					<div className="grow" />
 					<button
+						className="button"
 						onClick={() => {
 							findMatch();
 						}}
@@ -84,6 +85,7 @@ function Matchmaking(props: {
 					/>
 					<div className="grow" />
 					<button
+						className="button"
 						onClick={() => {
 							router.push("/");
 						}}
@@ -144,6 +146,11 @@ function Board(props: {
 		undefined,
 	);
 	const boardRef = useRef<HTMLTableElement>(null);
+	const tileButtons = [...Array(8).keys()].map((_) =>
+		// this is fine because the size of the board doesnt change
+		// eslint-disable-next-line react-hooks/rules-of-hooks
+		[...Array(8).keys()].map((_) => useRef<HTMLButtonElement>(null)),
+	);
 	if (!gameData.board) {
 		return <></>;
 	}
@@ -155,6 +162,7 @@ function Board(props: {
 						{row.map((tile, x) => (
 							<BoardTile
 								key={x}
+								tileButtons={tileButtons}
 								turn={props.turn}
 								coords={[x, y]}
 								selected={selected}
@@ -190,6 +198,7 @@ function BoardTile(props: {
 	sendTurn: (pieceIdx: number, moveIdx: number) => void;
 	player: Player;
 	boardRef: RefObject<HTMLTableElement | null>;
+	tileButtons: RefObject<HTMLButtonElement | null>[][];
 }) {
 	const { selected } = props;
 	const pieceIdx =
@@ -251,6 +260,7 @@ function TileContents(props: {
 	sendTurn: (pieceIdx: number, moveIdx: number) => void;
 	selectedPieceIdx: number;
 	moveIdx: number;
+	tileButtons: RefObject<HTMLButtonElement | null>[][];
 }) {
 	const [isDragged, setDragged] = useState(false);
 	const color = props.canMoveHere
@@ -274,7 +284,8 @@ function TileContents(props: {
 				background: hoverBgColor,
 			}}
 		>
-			<motion.div
+			<motion.button
+				ref={props.tileButtons[props.coords[1]][props.coords[0]]}
 				className={`${styles.tileContents} ${isDragged ? styles.dragged : ""}`}
 				drag
 				dragElastic={0.05}
@@ -292,9 +303,11 @@ function TileContents(props: {
 				onDragEnd={() => {
 					setDragged(false);
 				}}
-				whileHover={{ translateY: -8 }}
+				whileHover={props.isSelectable ? { translateY: -8 } : undefined}
 				whileTap={
-					props.isSelectable ? { scale: 0.9, translateY: 8 } : {}
+					props.isSelectable
+						? { scale: 0.9, translateY: 8 }
+						: undefined
 				}
 				onTap={() => {
 					if (props.canMoveHere) {
@@ -305,56 +318,47 @@ function TileContents(props: {
 						);
 					}
 				}}
+				aria-selected={props.isSelected}
+				aria-disabled={!(props.canMoveHere || props.isSelectable)}
+				onKeyDown={(event) => {
+					if (event.key == "ArrowUp" && props.coords[1] > 0) {
+						props.tileButtons[props.coords[1] - 1][
+							props.coords[0]
+						].current?.focus();
+					} else if (
+						event.key == "ArrowDown" &&
+						props.coords[1] < 7
+					) {
+						props.tileButtons[props.coords[1] + 1][
+							props.coords[0]
+						].current?.focus();
+					} else if (
+						event.key == "ArrowLeft" &&
+						props.coords[0] > 0
+					) {
+						props.tileButtons[props.coords[1]][
+							props.coords[0] - 1
+						].current?.focus();
+					} else if (
+						event.key == "ArrowRight" &&
+						props.coords[0] < 7
+					) {
+						props.tileButtons[props.coords[1]][
+							props.coords[0] + 1
+						].current?.focus();
+					}
+				}}
 			>
 				{props.piece != undefined && (
 					<>
-						{props.isSelectable && (
-							<input
-								type="checkbox"
-								checked={props.isSelected}
-								onChange={(event) => {
-									props.setSelected(
-										event.target.checked
-											? props.coords
-											: undefined,
-									);
-								}}
-							/>
-						)}
 						<img
 							alt={`${props.piece.owner} ${props.piece.pieceType.type}`}
 							src={`/pieces/${props.piece.owner}/${props.piece.pieceType.type}.svg`}
 						/>
 					</>
 				)}
-			</motion.div>
-			<MoveButton
-				show={props.canMoveHere}
-				sendTurn={props.sendTurn}
-				selectedPieceIdx={props.selectedPieceIdx}
-				moveIdx={props.moveIdx}
-			/>
+			</motion.button>
 		</motion.div>
-	);
-}
-
-function MoveButton(props: {
-	sendTurn: (pieceIdx: number, moveIdx: number) => void;
-	selectedPieceIdx: number;
-	moveIdx: number;
-	show: boolean;
-}) {
-	if (!props.show) {
-		return;
-	}
-	return (
-		<button
-			onClick={() => {
-				props.sendTurn(props.selectedPieceIdx, props.moveIdx);
-			}}
-		>
-			move here
-		</button>
 	);
 }
 
@@ -379,7 +383,13 @@ function Chat(props: { messages: string[]; sendMessage: (m: string) => void }) {
 		<div className={styles.chat}>
 			{useMemo(
 				() => (
-					<div className={styles.chatMessages} ref={chatMessages}>
+					<div
+						className={styles.chatMessages}
+						ref={chatMessages}
+						aria-live="polite"
+						role="log"
+						aria-label="game log"
+					>
 						{messages.map((message, i) => (
 							<section role="region" key={i}>
 								{message}
@@ -403,7 +413,9 @@ function Chat(props: { messages: string[]; sendMessage: (m: string) => void }) {
 						}
 					}}
 				/>
-				<button onClick={handleSendMessage}>send</button>
+				<button className="button" onClick={handleSendMessage}>
+					send
+				</button>
 			</div>
 		</div>
 	);

@@ -83,12 +83,9 @@
 	cursor: pointer;
 }
 
-.tileContents input {
-	display: none;
-}
-
 .tile button {
-	display: none;
+	background: none;
+	border: none;
 }
 
 .tileContents.dragged {
@@ -97,7 +94,7 @@
 
 .tileContentsContainer,
 .tileContents {
-	min-width: var(--tile-width);
-	min-height: var(--tile-width);
+	width: var(--tile-width);
+	height: var(--tile-width);
 	color: #fc9918;
 }

@@ -16,6 +16,7 @@ export default function Home() {
 			<h1>duck chess</h1>
 			<div className="grow" />
 			<button
+				className="button"
 				onClick={() => {
 					router.push("/play");
 				}}

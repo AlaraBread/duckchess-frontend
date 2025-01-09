@@ -98,7 +98,7 @@ label {
 }
 
 label:has(:focus-visible):after,
-button:focus-visible:after {
+.button:focus-visible:after {
 	content: "";
 	position: absolute;
 	left: -16px;
@@ -166,7 +166,7 @@ hr {
 	flex-grow: 1;
 }
 
-button {
+.button {
 	cursor: pointer;
 	position: relative;
 	font-size: 1.5rem;
@@ -180,13 +180,13 @@ button {
 }
 
 @media (hover: hover) and (pointer: fine) {
-	button:hover {
+	.button:hover {
 		scale: 1.1;
 		background: var(--button-hover);
 	}
 }
 
-button:active {
+.button:active {
 	scale: 0.95;
 	background: var(--button-hover-dark);
 }

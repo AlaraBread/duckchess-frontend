@@ -81,9 +81,13 @@ export function useMatch() {
 	}, [hasFired, findMatch]);
 	const [gameData, setGameData] = useState<GameData | undefined>(undefined);
 	const [ownId, setOwnId] = useState<number | undefined>(undefined);
-	const [turn, setTurn] = useState<Player>("white");
 	const [moves, setMoves] = useState<
-		{ pieces: [number, number][]; moves: [number, number][][] } | undefined
+		| {
+				turn: Player;
+				pieces: [number, number][];
+				moves: [number, number][][];
+		  }
+		| undefined
 	>(undefined);
 	const player: Player =
 		ownId == gameData?.board?.whitePlayer ? "white" : "black";
@@ -99,92 +103,90 @@ export function useMatch() {
 			onClose: (event) => {
 				setWebsocketError(event.reason);
 				setGameData(undefined);
-				setTurn("white");
 				setMoves(undefined);
 			},
 			onError: (error) => {
 				console.log("websocket error: ", error);
 				setWebsocketError("websocket error");
 				setGameData(undefined);
-				setTurn("white");
 				setMoves(undefined);
 			},
 			onMessage: (event) => {
-				const data: WebsocketEvent = JSON.parse(event.data);
-				console.log(data);
-				switch (data.type) {
-					case "gameState":
-						data.state.listeningPlayers = new Set(
-							data.state.listeningPlayers,
-						);
-						data.state.players = new Set(data.state.players);
-						data.state.chat = [];
-						setGameData(data.state);
-						break;
-					case "selfInfo":
-						setOwnId(data.id);
-						break;
-					case "playerAdded":
-						if (gameData != undefined) {
-							gameData.players.add(data.id);
-							setGameData({ ...gameData });
-						}
-						break;
-					case "playerRemoved":
-						if (gameData != undefined) {
-							gameData.players.delete(data.id);
-							setGameData({ ...gameData });
-						}
-						break;
-					case "playerJoined":
-						if (gameData != undefined) {
-							gameData.listeningPlayers.add(data.id);
-							setGameData({ ...gameData });
-						}
-						break;
-					case "playerLeft":
-						if (gameData != undefined) {
-							gameData.listeningPlayers.delete(data.id);
-							setGameData({ ...gameData });
-						}
-						break;
-					case "turnStart":
-						if (player == data.turn) {
+				// simulate a network delay for now
+				window.setTimeout(() => {
+					const data: WebsocketEvent = JSON.parse(event.data);
+					console.log(data);
+					switch (data.type) {
+						case "gameState":
+							data.state.listeningPlayers = new Set(
+								data.state.listeningPlayers,
+							);
+							data.state.players = new Set(data.state.players);
+							data.state.chat = [];
+							setGameData(data.state);
+							break;
+						case "selfInfo":
+							setOwnId(data.id);
+							break;
+						case "playerAdded":
+							if (gameData != undefined) {
+								gameData.players.add(data.id);
+								setGameData({ ...gameData });
+							}
+							break;
+						case "playerRemoved":
+							if (gameData != undefined) {
+								gameData.players.delete(data.id);
+								setGameData({ ...gameData });
+							}
+							break;
+						case "playerJoined":
+							if (gameData != undefined) {
+								gameData.listeningPlayers.add(data.id);
+								setGameData({ ...gameData });
+							}
+							break;
+						case "playerLeft":
+							if (gameData != undefined) {
+								gameData.listeningPlayers.delete(data.id);
+								setGameData({ ...gameData });
+							}
+							break;
+						case "turnStart":
 							setMoves({
+								turn: data.turn,
 								moves: data.moves,
 								pieces: data.movePieces,
 							});
-						} else {
-							setMoves(undefined);
-						}
-						setTurn(data.turn);
-						break;
-					case "move":
-						if (gameData && gameData.board) {
-							for (const move of data.moves) {
-								const from = move.from;
-								const to = move.to;
-								gameData.board.board[to[1]][to[0]].piece =
+							break;
+						case "move":
+							if (gameData && gameData.board) {
+								for (const move of data.moves) {
+									const from = move.from;
+									const to = move.to;
+									gameData.board.board[to[1]][to[0]].piece =
+										gameData.board.board[from[1]][
+											from[0]
+										].piece;
 									gameData.board.board[from[1]][
 										from[0]
-									].piece;
-								gameData.board.board[from[1]][from[0]].piece =
-									undefined;
+									].piece = undefined;
+								}
+								setGameData({ ...gameData });
 							}
-							setGameData({ ...gameData });
-						}
-						break;
-					case "chatMessage":
-						if (gameData != undefined) {
-							gameData.chat.push(data.message);
-							gameData.chat = [...gameData.chat];
-							setGameData({ ...gameData });
-						}
-						break;
-					default:
-						console.log("unknown server message: ", data);
-						break;
-				}
+							break;
+						case "chatMessage":
+							if (gameData != undefined) {
+								gameData.chat.push(data.message);
+								gameData.chat = [...gameData.chat];
+								setGameData({ ...gameData });
+							}
+							break;
+						default:
+							console.log("unknown server message: ", data);
+							break;
+					}
+				}, 2000);
 			},
 		},
 		gameId != undefined,
@@ -201,9 +203,10 @@ export function useMatch() {
 		},
 		moves,
 		sendTurn: (pieceIdx: number, moveIdx: number) => {
+			setMoves(undefined);
 			sendJsonMessage({ type: "turn", pieceIdx, moveIdx });
 		},
 		player,
-		turn,
+		turn: moves?.turn,
 	};
 }
