@@ -52,7 +52,7 @@ type WebsocketEvent =
 	| { type: "playerRemoved"; id: number }
 	| { type: "playerJoined"; id: number }
 	| { type: "playerLeft"; id: number }
-	| { type: "move"; m: Move }
+	| { type: "move"; moves: Move[] }
 	| { type: "gameState"; state: GameData }
 	| {
 			type: "turnStart";
@@ -60,7 +60,8 @@ type WebsocketEvent =
 			movePieces: [number, number][];
 			moves: [number, number][][];
 	  }
-	| { type: "chatMessage"; id: number; message: string };
+	| { type: "chatMessage"; id: number; message: string }
+	| { type: "end"; winner: Player };
 
 export function useMatch() {
 	const findMatch = useMutation({
@@ -160,12 +161,16 @@ export function useMatch() {
 						break;
 					case "move":
 						if (gameData && gameData.board) {
-							const from = data.m.from;
-							const to = data.m.to;
-							gameData.board.board[to[1]][to[0]].piece =
-								gameData.board.board[from[1]][from[0]].piece;
-							gameData.board.board[from[1]][from[0]].piece =
-								undefined;
+							for (const move of data.moves) {
+								const from = move.from;
+								const to = move.to;
+								gameData.board.board[to[1]][to[0]].piece =
+									gameData.board.board[from[1]][
+										from[0]
+									].piece;
+								gameData.board.board[from[1]][from[0]].piece =
+									undefined;
+							}
 							setGameData({ ...gameData });
 						}
 						break;
@@ -185,6 +190,7 @@ export function useMatch() {
 		gameId != undefined,
 	);
 	console.log("gamedata: ", gameData);
+	console.log("moves: ", moves);
 	return {
 		findMatch: findMatch.mutate,
 		gameId,

@@ -57,8 +57,9 @@
 }
 
 .tile {
-	height: 80px;
-	width: 80px;
+	--tile-width: 80px;
+	height: var(--tile-width);
+	width: var(--tile-width);
 	padding: 0;
 }
 
@@ -71,10 +72,32 @@
 }
 
 .tile img {
-	width: 100%;
-	height: 100%;
+	width: var(--tile-width);
+	height: var(--tile-width);
+	pointer-events: none;
+	user-select: none;
+	z-index: 2;
 }
 
 .moveTarget {
-	background: red;
+	cursor: pointer;
+}
+
+.tileContents input {
+	display: none;
+}
+
+.tile button {
+	display: none;
+}
+
+.tileContents.dragged {
+	z-index: 60;
+}
+
+.tileContentsContainer,
+.tileContents {
+	min-width: var(--tile-width);
+	min-height: var(--tile-width);
+	color: #fc9918;
 }

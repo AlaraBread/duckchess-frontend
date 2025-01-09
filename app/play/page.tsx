@@ -4,7 +4,9 @@ import { useRouter } from "next/navigation";
 import loadingStyles from "../loading.module.css";
 import styles from "./play.module.css";
 import { GameData, useMatch, Piece, Tile, Player } from "./match";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { RefObject, useEffect, useMemo, useRef, useState } from "react";
+import { motion } from "motion/react";
+
 export default function Play() {
 	const {
 		gameId,
@@ -141,11 +143,12 @@ function Board(props: {
 	const [selected, setSelected] = useState<[number, number] | undefined>(
 		undefined,
 	);
+	const boardRef = useRef<HTMLTableElement>(null);
 	if (!gameData.board) {
 		return <></>;
 	}
 	return (
-		<table className={styles.board} cellSpacing="0">
+		<table ref={boardRef} className={styles.board} cellSpacing="0">
 			<tbody>
 				{gameData.board.board.map((row, y) => (
 					<tr key={y}>
@@ -161,6 +164,7 @@ function Board(props: {
 								tile={tile}
 								sendTurn={props.sendTurn}
 								player={props.player}
+								boardRef={boardRef}
 							/>
 						))}
 					</tr>
@@ -185,6 +189,7 @@ function BoardTile(props: {
 	turn: Player;
 	sendTurn: (pieceIdx: number, moveIdx: number) => void;
 	player: Player;
+	boardRef: RefObject<HTMLTableElement | null>;
 }) {
 	const { selected } = props;
 	const pieceIdx =
@@ -213,24 +218,100 @@ function BoardTile(props: {
 			props.selected[0] == props.coords[0] &&
 			props.selected[1] == props.coords[1]) ??
 		false;
+	const isSelectable =
+		props.player == props.piece?.owner &&
+		props.turn == props.player &&
+		pieceIdx != -1;
 	return (
 		<td
 			className={`${styles.tile} ${
 				props.tile.floor == "dark" ? styles.dark : styles.light
 			} ${canMoveHere ? styles.moveTarget : ""}`}
 		>
-			{props.piece ? (
-				<>
-					<img
-						alt={`${props.piece.owner} ${props.piece.pieceType.type}`}
-						src={`/pieces/${props.piece.owner}/${props.piece.pieceType.type}.svg`}
-					/>
-					{props.player == props.piece.owner &&
-						props.turn == props.player &&
-						pieceIdx != -1 && (
+			<TileContents
+				{...props}
+				isSelectable={isSelectable}
+				isSelected={isSelected}
+				canMoveHere={canMoveHere}
+				selectedPieceIdx={selectedPieceIdx}
+				moveIdx={moveIdx}
+			/>
+		</td>
+	);
+}
+
+function TileContents(props: {
+	piece: Piece | undefined;
+	isSelectable: boolean;
+	isSelected: boolean;
+	canMoveHere: boolean;
+	setSelected: (piece: [number, number] | undefined) => void;
+	coords: [number, number];
+	boardRef: RefObject<HTMLTableElement | null>;
+	sendTurn: (pieceIdx: number, moveIdx: number) => void;
+	selectedPieceIdx: number;
+	moveIdx: number;
+}) {
+	const [isDragged, setDragged] = useState(false);
+	const color = props.canMoveHere
+		? "#dd217d"
+		: props.isSelected && props.isSelectable
+			? "#ff5f00"
+			: props.isSelectable
+				? "#ffb00d"
+				: undefined;
+	const hoverBgColor = color ? color + "ff" : "#00000000";
+	const bgColor = color ? color + "88" : "#00000000";
+	return (
+		<motion.div
+			className={styles.tileContentsContainer}
+			initial={{ background: "#00000000" }}
+			animate={{
+				background: bgColor,
+			}}
+			transition={{ ease: "easeOut", duration: 0.1 }}
+			whileHover={{
+				background: hoverBgColor,
+			}}
+		>
+			<motion.div
+				className={`${styles.tileContents} ${isDragged ? styles.dragged : ""}`}
+				drag
+				dragElastic={0.05}
+				dragConstraints={
+					props.isSelectable
+						? props.boardRef
+						: { top: 0, bottom: 0, left: 0, right: 0 }
+				}
+				whileDrag={{ scale: 1.2 }}
+				dragSnapToOrigin={true}
+				onDragStart={() => {
+					props.setSelected(props.coords);
+					setDragged(true);
+				}}
+				onDragEnd={() => {
+					setDragged(false);
+				}}
+				whileHover={{ translateY: -8 }}
+				whileTap={
+					props.isSelectable ? { scale: 0.9, translateY: 8 } : {}
+				}
+				onTap={() => {
+					if (props.canMoveHere) {
+						props.sendTurn(props.selectedPieceIdx, props.moveIdx);
+					} else {
+						props.setSelected(
+							props.isSelected ? undefined : props.coords,
+						);
+					}
+				}}
+			>
+				{props.piece != undefined && (
+					<>
+						{props.isSelectable && (
 							<input
 								type="checkbox"
-								checked={isSelected}
+								checked={props.isSelected}
 								onChange={(event) => {
 									props.setSelected(
 										event.target.checked
@@ -238,30 +319,42 @@ function BoardTile(props: {
 											: undefined,
 									);
 								}}
-							></input>
+							/>
 						)}
-					{canMoveHere && (
-						<button
-							onClick={() => {
-								props.sendTurn(selectedPieceIdx, moveIdx);
-							}}
-						>
-							move here
-						</button>
-					)}
-				</>
-			) : (
-				canMoveHere && (
-					<button
-						onClick={() => {
-							props.sendTurn(selectedPieceIdx, moveIdx);
-						}}
-					>
-						move here
-					</button>
-				)
-			)}
-		</td>
+						<img
+							alt={`${props.piece.owner} ${props.piece.pieceType.type}`}
+							src={`/pieces/${props.piece.owner}/${props.piece.pieceType.type}.svg`}
+						/>
+					</>
+				)}
+			</motion.div>
+			<MoveButton
+				show={props.canMoveHere}
+				sendTurn={props.sendTurn}
+				selectedPieceIdx={props.selectedPieceIdx}
+				moveIdx={props.moveIdx}
+			/>
+		</motion.div>
+	);
+}
+
+function MoveButton(props: {
+	sendTurn: (pieceIdx: number, moveIdx: number) => void;
+	selectedPieceIdx: number;
+	moveIdx: number;
+	show: boolean;
+}) {
+	if (!props.show) {
+		return;
+	}
+	return (
+		<button
+			onClick={() => {
+				props.sendTurn(props.selectedPieceIdx, props.moveIdx);
+			}}
+		>
+			move here
+		</button>
 	);
 }
 
