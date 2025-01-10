@@ -5,7 +5,7 @@ import loadingStyles from "../loading.module.css";
 import styles from "./play.module.css";
 import { GameData, useMatch, Piece, Tile, Player } from "./match";
 import { RefObject, useEffect, useMemo, useRef, useState } from "react";
-import { motion } from "motion/react";
+import { motion, PanInfo } from "motion/react";
 
 export default function Play() {
 	const {
@@ -151,6 +151,11 @@ function Board(props: {
 		// eslint-disable-next-line react-hooks/rules-of-hooks
 		[...Array(8).keys()].map((_) => useRef<HTMLButtonElement>(null)),
 	);
+	useEffect(() => {
+		if (props.turn != props.player || !props.moves) {
+			setSelected(undefined);
+		}
+	}, [props.moves, props.player, props.turn, setSelected]);
 	if (!gameData.board) {
 		return <></>;
 	}
@@ -170,7 +175,10 @@ function Board(props: {
 								piece={tile.piece}
 								moves={props.moves}
 								tile={tile}
-								sendTurn={props.sendTurn}
+								sendTurn={(piece, move) => {
+									setSelected(undefined);
+									props.sendTurn(piece, move);
+								}}
 								player={props.player}
 								boardRef={boardRef}
 							/>
@@ -244,6 +252,7 @@ function BoardTile(props: {
 				canMoveHere={canMoveHere}
 				selectedPieceIdx={selectedPieceIdx}
 				moveIdx={moveIdx}
+				moves={moves}
 			/>
 		</td>
 	);
@@ -260,6 +269,7 @@ function TileContents(props: {
 	sendTurn: (pieceIdx: number, moveIdx: number) => void;
 	selectedPieceIdx: number;
 	moveIdx: number;
+	moves: [number, number][] | undefined;
 	tileButtons: RefObject<HTMLButtonElement | null>[][];
 }) {
 	const [isDragged, setDragged] = useState(false);
@@ -272,8 +282,29 @@ function TileContents(props: {
 				: undefined;
 	const hoverBgColor = color ? color + "ff" : "#00000000";
 	const bgColor = color ? color + "88" : "#00000000";
+	function moveToDragEnd(info: PanInfo) {
+		const tileWidth =
+			props.tileButtons[0][0].current?.getBoundingClientRect().width;
+		if (!tileWidth) {
+			return;
+		}
+		const xOffset = Math.round(info.offset.x / tileWidth);
+		const yOffset = Math.round(info.offset.y / tileWidth);
+		const targetX = props.coords[0] + xOffset;
+		const targetY = props.coords[1] + yOffset;
+		if (!(targetX >= 0 && targetX < 8 && targetY >= 0 && targetY < 8)) {
+			return;
+		}
+		const moveIdx =
+			props.moves?.findIndex(([x, y]) => x == targetX && y == targetY) ??
+			-1;
+		if (moveIdx != -1) {
+			props.sendTurn(props.selectedPieceIdx, moveIdx);
+		}
+	}
 	return (
-		<motion.div
+		<motion.button
+			ref={props.tileButtons[props.coords[1]][props.coords[0]]}
 			className={styles.tileContentsContainer}
 			initial={{ background: "#00000000" }}
 			animate={{
@@ -283,9 +314,40 @@ function TileContents(props: {
 			whileHover={{
 				background: hoverBgColor,
 			}}
+			onTap={() => {
+				if (props.canMoveHere) {
+					props.sendTurn(props.selectedPieceIdx, props.moveIdx);
+				} else if (props.isSelectable) {
+					props.setSelected(
+						props.isSelected ? undefined : props.coords,
+					);
+				} else {
+					props.setSelected(undefined);
+				}
+			}}
+			aria-selected={props.isSelected}
+			aria-disabled={!(props.canMoveHere || props.isSelectable)}
+			onKeyDown={(event) => {
+				if (event.key == "ArrowUp" && props.coords[1] > 0) {
+					props.tileButtons[props.coords[1] - 1][
+						props.coords[0]
+					].current?.focus();
+				} else if (event.key == "ArrowDown" && props.coords[1] < 7) {
+					props.tileButtons[props.coords[1] + 1][
+						props.coords[0]
+					].current?.focus();
+				} else if (event.key == "ArrowLeft" && props.coords[0] > 0) {
+					props.tileButtons[props.coords[1]][
+						props.coords[0] - 1
+					].current?.focus();
+				} else if (event.key == "ArrowRight" && props.coords[0] < 7) {
+					props.tileButtons[props.coords[1]][
+						props.coords[0] + 1
+					].current?.focus();
+				}
+			}}
 		>
-			<motion.button
-				ref={props.tileButtons[props.coords[1]][props.coords[0]]}
+			<motion.div
 				className={`${styles.tileContents} ${isDragged ? styles.dragged : ""}`}
 				drag
 				dragElastic={0.05}
@@ -300,8 +362,9 @@ function TileContents(props: {
 					props.setSelected(props.coords);
 					setDragged(true);
 				}}
-				onDragEnd={() => {
+				onDragEnd={(_e, info) => {
 					setDragged(false);
+					moveToDragEnd(info);
 				}}
 				whileHover={props.isSelectable ? { translateY: -8 } : undefined}
 				whileTap={
@@ -309,45 +372,7 @@ function TileContents(props: {
 						? { scale: 0.9, translateY: 8 }
 						: undefined
 				}
-				onTap={() => {
-					if (props.canMoveHere) {
-						props.sendTurn(props.selectedPieceIdx, props.moveIdx);
-					} else {
-						props.setSelected(
-							props.isSelected ? undefined : props.coords,
-						);
-					}
-				}}
-				aria-selected={props.isSelected}
-				aria-disabled={!(props.canMoveHere || props.isSelectable)}
-				onKeyDown={(event) => {
-					if (event.key == "ArrowUp" && props.coords[1] > 0) {
-						props.tileButtons[props.coords[1] - 1][
-							props.coords[0]
-						].current?.focus();
-					} else if (
-						event.key == "ArrowDown" &&
-						props.coords[1] < 7
-					) {
-						props.tileButtons[props.coords[1] + 1][
-							props.coords[0]
-						].current?.focus();
-					} else if (
-						event.key == "ArrowLeft" &&
-						props.coords[0] > 0
-					) {
-						props.tileButtons[props.coords[1]][
-							props.coords[0] - 1
-						].current?.focus();
-					} else if (
-						event.key == "ArrowRight" &&
-						props.coords[0] < 7
-					) {
-						props.tileButtons[props.coords[1]][
-							props.coords[0] + 1
-						].current?.focus();
-					}
-				}}
+				transition={{ duration: 0.1, ease: "easeOut" }}
 			>
 				{props.piece != undefined && (
 					<>
@@ -357,8 +382,8 @@ function TileContents(props: {
 						/>
 					</>
 				)}
-			</motion.button>
-		</motion.div>
+			</motion.div>
+		</motion.button>
 	);
 }
 

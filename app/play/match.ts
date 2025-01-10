@@ -201,7 +201,7 @@ export function useMatch() {
 		sendChatMessage: (message: string) => {
 			sendJsonMessage({ type: "chatMessage", message });
 		},
-		moves,
+		moves: player == moves?.turn ? moves : undefined,
 		sendTurn: (pieceIdx: number, moveIdx: number) => {
 			setMoves(undefined);
 			sendJsonMessage({ type: "turn", pieceIdx, moveIdx });
