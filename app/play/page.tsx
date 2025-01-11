@@ -3,8 +3,15 @@
 import { useRouter } from "next/navigation";
 import loadingStyles from "../loading.module.css";
 import styles from "./play.module.css";
-import { GameData, useMatch, Piece, Tile, Player } from "./match";
-import { RefObject, useEffect, useMemo, useRef, useState } from "react";
+import { GameData, useMatch, Piece, Tile, Player, Move } from "./match";
+import {
+	RefObject,
+	useCallback,
+	useEffect,
+	useMemo,
+	useRef,
+	useState,
+} from "react";
 import { motion, PanInfo } from "motion/react";
 
 export default function Play() {
@@ -18,6 +25,9 @@ export default function Play() {
 		sendTurn,
 		player,
 		turn,
+		boardAnimations,
+		setBoardAnimations,
+		applyMove,
 	} = useMatch();
 	if (!gameData || !gameData.board) {
 		return (
@@ -37,6 +47,9 @@ export default function Play() {
 			sendChatMessage={sendChatMessage}
 			player={player}
 			turn={turn ?? "white"}
+			boardAnimations={boardAnimations}
+			setBoardAnimations={setBoardAnimations}
+			applyMove={applyMove}
 		/>
 	);
 }
@@ -110,16 +123,13 @@ function Game(props: {
 	sendTurn: (pieceIdx: number, moveIdx: number) => void;
 	player: Player;
 	turn: Player;
+	boardAnimations: Move[] | undefined;
+	setBoardAnimations: (animations: Move[] | undefined) => void;
+	applyMove: (move: Move) => void;
 }) {
 	return (
 		<div className={styles.game}>
-			<Board
-				turn={props.turn}
-				gameData={props.gameData}
-				moves={props.moves}
-				sendTurn={props.sendTurn}
-				player={props.player}
-			/>
+			<Board {...props} />
 			<div className="grow" />
 			<Chat
 				messages={props.gameData.chat}
@@ -140,6 +150,9 @@ function Board(props: {
 		| undefined;
 	sendTurn: (pieceIdx: number, moveIdx: number) => void;
 	player: Player;
+	boardAnimations: Move[] | undefined;
+	setBoardAnimations: (animations: Move[] | undefined) => void;
+	applyMove: (move: Move) => void;
 }) {
 	const { gameData } = props;
 	const [selected, setSelected] = useState<[number, number] | undefined>(
@@ -156,6 +169,33 @@ function Board(props: {
 			setSelected(undefined);
 		}
 	}, [props.moves, props.player, props.turn, setSelected]);
+	const { boardAnimations, setBoardAnimations, applyMove } = props;
+	const [currentAnimation, setCurrentAnimation] = useState<
+		Move | undefined
+	>();
+	const finishAnimation = useCallback(() => {
+		if (currentAnimation) {
+			applyMove(currentAnimation);
+		}
+		if (boardAnimations && boardAnimations.length > 0) {
+			const move = boardAnimations.shift();
+			setCurrentAnimation(move);
+			setBoardAnimations([...boardAnimations]);
+		} else {
+			setCurrentAnimation(undefined);
+		}
+	}, [
+		boardAnimations,
+		setBoardAnimations,
+		currentAnimation,
+		setCurrentAnimation,
+		applyMove,
+	]);
+	useEffect(() => {
+		if (currentAnimation == undefined) {
+			finishAnimation();
+		}
+	}, [currentAnimation, finishAnimation]);
 	if (!gameData.board) {
 		return <></>;
 	}
@@ -181,6 +221,8 @@ function Board(props: {
 								}}
 								player={props.player}
 								boardRef={boardRef}
+								finishAnimation={finishAnimation}
+								currentAnimation={currentAnimation}
 							/>
 						))}
 					</tr>
@@ -207,6 +249,8 @@ function BoardTile(props: {
 	player: Player;
 	boardRef: RefObject<HTMLTableElement | null>;
 	tileButtons: RefObject<HTMLButtonElement | null>[][];
+	finishAnimation: () => void;
+	currentAnimation: Move | undefined;
 }) {
 	const { selected } = props;
 	const pieceIdx =
@@ -215,7 +259,7 @@ function BoardTile(props: {
 				piece[0] == props.coords[0] && piece[1] == props.coords[1],
 		) ?? -1;
 	const selectedPieceIdx =
-		(selected
+		(selected && !props.currentAnimation
 			? props.moves?.pieces.findIndex(
 					(piece) =>
 						piece[0] == selected[0] && piece[1] == selected[1],
@@ -232,10 +276,12 @@ function BoardTile(props: {
 	const canMoveHere = moveIdx != -1;
 	const isSelected =
 		(props.selected &&
+			!props.currentAnimation &&
 			props.selected[0] == props.coords[0] &&
 			props.selected[1] == props.coords[1]) ??
 		false;
 	const isSelectable =
+		!props.currentAnimation &&
 		props.player == props.piece?.owner &&
 		props.turn == props.player &&
 		pieceIdx != -1;
@@ -271,6 +317,8 @@ function TileContents(props: {
 	moveIdx: number;
 	moves: [number, number][] | undefined;
 	tileButtons: RefObject<HTMLButtonElement | null>[][];
+	finishAnimation: () => void;
+	currentAnimation: Move | undefined;
 }) {
 	const [isDragged, setDragged] = useState(false);
 	const color = props.canMoveHere
@@ -282,9 +330,32 @@ function TileContents(props: {
 				: undefined;
 	const hoverBgColor = color ? color + "ff" : "#00000000";
 	const bgColor = color ? color + "88" : "#00000000";
+	const tileWidth =
+		props.tileButtons[0][0].current?.getBoundingClientRect().width ?? 0;
+	const animateX: (number | undefined)[] = [0];
+	const animateY: (number | undefined)[] = [0];
+	const animateScale: (number | undefined)[] = [1];
+	if (props.currentAnimation) {
+		if (
+			props.currentAnimation.from[0] == props.coords[0] &&
+			props.currentAnimation.from[1] == props.coords[1]
+		) {
+			// this tile is moving somewhere else
+			const offsetX =
+				props.currentAnimation.to[0] - props.currentAnimation.from[0];
+			const offsetY =
+				props.currentAnimation.to[1] - props.currentAnimation.from[1];
+			animateX.push(offsetX * tileWidth);
+			animateY.push(offsetY * tileWidth);
+		} else if (
+			props.currentAnimation.to[0] == props.coords[0] &&
+			props.currentAnimation.to[1] == props.coords[1]
+		) {
+			// this tile is getting captured
+			animateScale.push(0);
+		}
+	}
 	function moveToDragEnd(info: PanInfo) {
-		const tileWidth =
-			props.tileButtons[0][0].current?.getBoundingClientRect().width;
 		if (!tileWidth) {
 			return;
 		}
@@ -348,11 +419,11 @@ function TileContents(props: {
 			}}
 		>
 			<motion.div
-				className={`${styles.tileContents} ${isDragged ? styles.dragged : ""}`}
+				className={`${styles.tileContents} ${isDragged || animateX.length > 0 ? styles.dragged : ""}`}
 				drag
 				dragElastic={0.05}
 				dragConstraints={
-					props.isSelectable
+					props.isSelectable && animateX.length == 1
 						? props.boardRef
 						: { top: 0, bottom: 0, left: 0, right: 0 }
 				}
@@ -372,15 +443,35 @@ function TileContents(props: {
 						? { scale: 0.9, translateY: 8 }
 						: undefined
 				}
-				transition={{ duration: 0.1, ease: "easeOut" }}
+				dragTransition={{
+					bounceDamping: 1000000000,
+					bounceStiffness: 1000000000,
+				}}
+				transition={{
+					duration: 0.1,
+					ease: "backOut",
+				}}
 			>
 				{props.piece != undefined && (
-					<>
-						<img
-							alt={`${props.piece.owner} ${props.piece.pieceType.type}`}
-							src={`/pieces/${props.piece.owner}/${props.piece.pieceType.type}.svg`}
-						/>
-					</>
+					<motion.img
+						animate={{
+							translateX: animateX,
+							translateY: animateY,
+							scale: animateScale,
+						}}
+						transition={{ duration: 0.2, ease: "backOut" }}
+						onAnimationComplete={() => {
+							// only one piece can call finishAnimation
+							// this works for now
+							if (
+								animateScale.length == 1 &&
+								animateX.length == 2
+							)
+								props.finishAnimation();
+						}}
+						alt={`${props.piece.owner} ${props.piece.pieceType.type}`}
+						src={`/pieces/${props.piece.owner}/${props.piece.pieceType.type}.svg`}
+					/>
 				)}
 			</motion.div>
 		</motion.button>

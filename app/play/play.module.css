@@ -76,7 +76,6 @@
 	height: var(--tile-width);
 	pointer-events: none;
 	user-select: none;
-	z-index: 2;
 }
 
 .moveTarget {
@@ -89,7 +88,7 @@
 }
 
 .tileContents.dragged {
-	z-index: 6;
+	z-index: 1;
 }
 
 .tileContentsContainer,
