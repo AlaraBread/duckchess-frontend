@@ -97,3 +97,20 @@
 	height: var(--tile-width);
 	color: #fc9918;
 }
+
+.promotionMenuContainer {
+	position: relative;
+}
+
+.promotionMenu {
+	z-index: 2;
+	display: flex;
+	background: var(--background-2);
+	border: dotted var(--foreground) 4px;
+	border-radius: 16px;
+	padding: 8px;
+}
+
+.promotionMenu[aria-hidden="true"] {
+	display: none;
+}

@@ -3,16 +3,18 @@
 import { useRouter } from "next/navigation";
 import loadingStyles from "../loading.module.css";
 import styles from "./play.module.css";
-import { GameData, useMatch, Piece, Tile, Player, Move } from "./match";
+import { GameData, useMatch, Piece, Tile, Player, Move, Moves } from "./match";
 import {
 	RefObject,
 	useCallback,
 	useEffect,
+	useId,
 	useMemo,
 	useRef,
 	useState,
 } from "react";
 import { motion, PanInfo } from "motion/react";
+import { flip, shift, useFloating } from "@floating-ui/react-dom";
 
 export default function Play() {
 	const {
@@ -114,12 +116,7 @@ function Matchmaking(props: {
 function Game(props: {
 	gameData: GameData;
 	sendChatMessage: (m: string) => void;
-	moves:
-		| {
-				pieces: [number, number][];
-				moves: [number, number][][];
-		  }
-		| undefined;
+	moves: Moves | undefined;
 	sendTurn: (pieceIdx: number, moveIdx: number) => void;
 	player: Player;
 	turn: Player;
@@ -142,12 +139,7 @@ function Game(props: {
 function Board(props: {
 	gameData: GameData;
 	turn: Player;
-	moves:
-		| {
-				pieces: [number, number][];
-				moves: [number, number][][];
-		  }
-		| undefined;
+	moves: Moves | undefined;
 	sendTurn: (pieceIdx: number, moveIdx: number) => void;
 	player: Player;
 	boardAnimations: Move[] | undefined;
@@ -158,6 +150,16 @@ function Board(props: {
 	const [selected, setSelected] = useState<[number, number] | undefined>(
 		undefined,
 	);
+	const [open, setOpen] = useState<[number, number] | undefined>(undefined);
+	useEffect(() => {
+		if (!selected) {
+			setOpen(undefined);
+		}
+	}, [selected]);
+	const selectedPiece =
+		gameData.board && selected != undefined
+			? gameData.board.board[selected[1]][selected[0]].piece
+			: undefined;
 	const boardRef = useRef<HTMLTableElement>(null);
 	const tileButtons = [...Array(8).keys()].map((_) =>
 		// this is fine because the size of the board doesnt change
@@ -212,6 +214,9 @@ function Board(props: {
 								coords={[x, y]}
 								selected={selected}
 								setSelected={setSelected}
+								selectedPiece={selectedPiece}
+								open={open}
+								setOpen={setOpen}
 								piece={tile.piece}
 								moves={props.moves}
 								tile={tile}
@@ -234,15 +239,11 @@ function Board(props: {
 
 function BoardTile(props: {
 	piece: Piece | undefined;
-	moves:
-		| {
-				pieces: [number, number][];
-				moves: [number, number][][];
-		  }
-		| undefined;
+	moves: Moves | undefined;
 	coords: [number, number];
 	selected: [number, number] | undefined;
 	setSelected: (piece: [number, number] | undefined) => void;
+	selectedPiece: Piece | undefined;
 	tile: Tile;
 	turn: Player;
 	sendTurn: (pieceIdx: number, moveIdx: number) => void;
@@ -251,6 +252,8 @@ function BoardTile(props: {
 	tileButtons: RefObject<HTMLButtonElement | null>[][];
 	finishAnimation: () => void;
 	currentAnimation: Move | undefined;
+	open: [number, number] | undefined;
+	setOpen: (o: [number, number] | undefined) => void;
 }) {
 	const { selected } = props;
 	const pieceIdx =
@@ -269,11 +272,15 @@ function BoardTile(props: {
 		selectedPieceIdx != -1
 			? props.moves?.moves[selectedPieceIdx]
 			: undefined;
-	const moveIdx =
-		moves?.findIndex(
-			([x, y]) => x == props.coords[0] && y == props.coords[1],
-		) ?? -1;
-	const canMoveHere = moveIdx != -1;
+	const movesThatEndHere =
+		moves
+			?.map((move, idx) => [move, idx] as const)
+			.filter(
+				([move]) =>
+					move.to[0] == props.coords[0] &&
+					move.to[1] == props.coords[1],
+			) ?? [];
+	const canMoveHere = movesThatEndHere.length > 0;
 	const isSelected =
 		(props.selected &&
 			!props.currentAnimation &&
@@ -297,7 +304,7 @@ function BoardTile(props: {
 				isSelected={isSelected}
 				canMoveHere={canMoveHere}
 				selectedPieceIdx={selectedPieceIdx}
-				moveIdx={moveIdx}
+				movesThatEndHere={movesThatEndHere}
 				moves={moves}
 			/>
 		</td>
@@ -314,13 +321,48 @@ function TileContents(props: {
 	boardRef: RefObject<HTMLTableElement | null>;
 	sendTurn: (pieceIdx: number, moveIdx: number) => void;
 	selectedPieceIdx: number;
-	moveIdx: number;
-	moves: [number, number][] | undefined;
+	movesThatEndHere: (readonly [Move, number])[];
+	moves: Move[] | undefined;
 	tileButtons: RefObject<HTMLButtonElement | null>[][];
 	finishAnimation: () => void;
 	currentAnimation: Move | undefined;
+	selectedPiece: Piece | undefined;
+	open: [number, number] | undefined;
+	setOpen: (o: [number, number] | undefined) => void;
 }) {
+	const { refs, floatingStyles } = useFloating({
+		placement: "top",
+		middleware: [flip(), shift()],
+	});
 	const [isDragged, setDragged] = useState(false);
+	useEffect(() => {
+		if (!props.isSelectable) {
+			setDragged(false);
+		}
+	}, [props.isSelectable]);
+	const isOpen =
+		!!props.open &&
+		props.open[0] == props.coords[0] &&
+		props.open[1] == props.coords[1];
+	function setOpen(o: boolean) {
+		if (o) {
+			const firstButton: HTMLButtonElement | null | undefined = refs
+				.floating.current?.firstElementChild as HTMLButtonElement;
+			console.log("setting to open", firstButton);
+			props.setOpen(props.coords);
+			firstButton?.focus();
+		} else {
+			console.log(
+				"setting to closed",
+				props.tileButtons[props.coords[1]][props.coords[0]].current,
+			);
+			props.tileButtons[props.coords[1]][
+				props.coords[0]
+			].current?.focus();
+			if (isOpen) props.setOpen(undefined);
+		}
+	}
+	const menuId = useId();
 	const color = props.canMoveHere
 		? "#dd217d"
 		: props.isSelected && props.isSelectable
@@ -329,7 +371,7 @@ function TileContents(props: {
 				? "#ffb00d"
 				: undefined;
 	const hoverBgColor = color ? color + "ff" : "#00000000";
-	const bgColor = color ? color + "88" : "#00000000";
+	const bgColor = color ? color + (isOpen ? "ff" : "88") : "#00000000";
 	const tileWidth =
 		props.tileButtons[0][0].current?.getBoundingClientRect().width ?? 0;
 	const animateX: (number | undefined)[] = [0];
@@ -366,116 +408,251 @@ function TileContents(props: {
 		if (!(targetX >= 0 && targetX < 8 && targetY >= 0 && targetY < 8)) {
 			return;
 		}
-		const moveIdx =
-			props.moves?.findIndex(([x, y]) => x == targetX && y == targetY) ??
-			-1;
-		if (moveIdx != -1) {
-			props.sendTurn(props.selectedPieceIdx, moveIdx);
+		const moves =
+			props.moves
+				?.map((move, idx) => [move, idx] as const)
+				.filter(
+					([move]) => move.to[0] == targetX && move.to[1] == targetY,
+				) ?? [];
+		if (moves.length == 1) {
+			props.sendTurn(props.selectedPieceIdx, moves[0][1]);
+		} else if (moves.length > 1) {
+			// open dialog to pick move
+			console.log("opening from drag");
+			props.setOpen([targetX, targetY]);
 		}
 	}
 	return (
-		<motion.button
-			ref={props.tileButtons[props.coords[1]][props.coords[0]]}
-			className={styles.tileContentsContainer}
-			initial={{ background: "#00000000" }}
-			animate={{
-				background: bgColor,
-			}}
-			transition={{ ease: "easeOut", duration: 0.1 }}
-			whileHover={{
-				background: hoverBgColor,
-			}}
-			onTap={() => {
-				if (props.canMoveHere) {
-					props.sendTurn(props.selectedPieceIdx, props.moveIdx);
-				} else if (props.isSelectable) {
-					props.setSelected(
-						props.isSelected ? undefined : props.coords,
-					);
-				} else {
-					props.setSelected(undefined);
-				}
-			}}
-			aria-selected={props.isSelected}
-			aria-disabled={!(props.canMoveHere || props.isSelectable)}
-			onKeyDown={(event) => {
-				if (event.key == "ArrowUp" && props.coords[1] > 0) {
-					props.tileButtons[props.coords[1] - 1][
-						props.coords[0]
-					].current?.focus();
-				} else if (event.key == "ArrowDown" && props.coords[1] < 7) {
-					props.tileButtons[props.coords[1] + 1][
-						props.coords[0]
-					].current?.focus();
-				} else if (event.key == "ArrowLeft" && props.coords[0] > 0) {
-					props.tileButtons[props.coords[1]][
-						props.coords[0] - 1
-					].current?.focus();
-				} else if (event.key == "ArrowRight" && props.coords[0] < 7) {
-					props.tileButtons[props.coords[1]][
-						props.coords[0] + 1
-					].current?.focus();
-				}
-			}}
-		>
-			<motion.div
-				className={`${styles.tileContents} ${isDragged || animateX.length > 0 ? styles.dragged : ""}`}
-				drag
-				dragElastic={0.05}
-				dragConstraints={
-					props.isSelectable && animateX.length == 1
-						? props.boardRef
-						: { top: 0, bottom: 0, left: 0, right: 0 }
-				}
-				whileDrag={{ scale: 1.2 }}
-				dragSnapToOrigin={true}
-				onDragStart={() => {
-					props.setSelected(props.coords);
-					setDragged(true);
+		<>
+			<motion.button
+				ref={props.tileButtons[props.coords[1]][props.coords[0]]}
+				className={styles.tileContentsContainer}
+				initial={{ background: "#00000000" }}
+				animate={{
+					background: bgColor,
 				}}
-				onDragEnd={(_e, info) => {
-					setDragged(false);
-					moveToDragEnd(info);
+				transition={{ ease: "easeOut", duration: 0.1 }}
+				whileHover={{
+					background: hoverBgColor,
 				}}
-				whileHover={props.isSelectable ? { translateY: -8 } : undefined}
-				whileTap={
-					props.isSelectable
-						? { scale: 0.9, translateY: 8 }
-						: undefined
-				}
-				dragTransition={{
-					bounceDamping: 1000000000,
-					bounceStiffness: 1000000000,
+				onTap={() => {
+					if (props.canMoveHere) {
+						if (props.movesThatEndHere.length == 1) {
+							console.log("moving from tap");
+							props.sendTurn(
+								props.selectedPieceIdx,
+								props.movesThatEndHere[0][1],
+							);
+						} else if (props.movesThatEndHere.length > 1) {
+							console.log("opening from tap");
+							setOpen(!isOpen);
+						}
+					} else if (props.isSelectable) {
+						console.log("selecting from tap");
+						props.setSelected(
+							props.isSelected && !isDragged
+								? undefined
+								: props.coords,
+						);
+					} else {
+						console.log("tapped outside");
+						props.setSelected(undefined);
+					}
 				}}
-				transition={{
-					duration: 0.1,
-					ease: "backOut",
+				aria-pressed={props.isSelected}
+				aria-disabled={!(props.canMoveHere || props.isSelectable)}
+				aria-haspopup={props.movesThatEndHere.length > 1}
+				aria-expanded={props.movesThatEndHere.length > 1 && isOpen}
+				aria-controls={menuId}
+				role="button"
+				onKeyDown={(event) => {
+					if (event.key == "ArrowUp" && props.coords[1] > 0) {
+						props.tileButtons[props.coords[1] - 1][
+							props.coords[0]
+						].current?.focus();
+					} else if (
+						event.key == "ArrowDown" &&
+						props.coords[1] < 7
+					) {
+						props.tileButtons[props.coords[1] + 1][
+							props.coords[0]
+						].current?.focus();
+					} else if (
+						event.key == "ArrowLeft" &&
+						props.coords[0] > 0
+					) {
+						props.tileButtons[props.coords[1]][
+							props.coords[0] - 1
+						].current?.focus();
+					} else if (
+						event.key == "ArrowRight" &&
+						props.coords[0] < 7
+					) {
+						props.tileButtons[props.coords[1]][
+							props.coords[0] + 1
+						].current?.focus();
+					}
 				}}
 			>
-				{props.piece != undefined && (
-					<motion.img
-						animate={{
-							translateX: animateX,
-							translateY: animateY,
-							scale: animateScale,
+				<motion.div
+					className={`${styles.tileContents} ${isDragged || animateX.length > 0 ? styles.dragged : ""}`}
+					drag
+					dragElastic={0.05}
+					dragConstraints={
+						props.isSelectable && animateX.length == 1
+							? props.boardRef
+							: { top: 0, bottom: 0, left: 0, right: 0 }
+					}
+					whileDrag={{ scale: 1.2 }}
+					dragSnapToOrigin={true}
+					onDragStart={() => {
+						props.setSelected(props.coords);
+						setDragged(true);
+					}}
+					onDragEnd={(_e, info) => {
+						setDragged(false);
+						moveToDragEnd(info);
+					}}
+					whileHover={
+						props.isSelectable || props.canMoveHere
+							? { translateY: -8 }
+							: undefined
+					}
+					whileTap={
+						props.isSelectable || props.canMoveHere
+							? { scale: 0.9, translateY: 8 }
+							: undefined
+					}
+					dragTransition={{
+						bounceDamping: 1000000000,
+						bounceStiffness: 1000000000,
+					}}
+					transition={{
+						duration: 0.1,
+						ease: "backOut",
+					}}
+				>
+					{props.piece != undefined && (
+						<motion.img
+							animate={{
+								translateX: animateX,
+								translateY: animateY,
+								scale: animateScale,
+							}}
+							transition={{ duration: 0.2, ease: "backOut" }}
+							onAnimationComplete={() => {
+								// only one piece can call finishAnimation
+								// this works for now
+								if (
+									animateScale.length == 1 &&
+									animateX.length == 2
+								)
+									props.finishAnimation();
+							}}
+							alt={`${props.piece.owner} ${pieceHumanName(props.piece.pieceType.type)}`}
+							src={pieceImage(props.piece)}
+						/>
+					)}
+				</motion.div>
+			</motion.button>
+			<div className={styles.promotionMenuContainer}>
+				{props.movesThatEndHere.length > 1 ? (
+					<motion.div
+						// https://www.w3.org/WAI/ARIA/apg/patterns/menubar/
+						role="menu"
+						aria-hidden={!isOpen}
+						aria-label="promotion options"
+						aria-orientation="horizontal"
+						id={menuId}
+						className={styles.promotionMenu}
+						onKeyDown={(event) => {
+							if (event.key == "Escape") {
+								setOpen(false);
+							} else if (event.key == "Home") {
+								const firstButton:
+									| HTMLButtonElement
+									| null
+									| undefined = refs.floating.current
+									?.firstElementChild as HTMLButtonElement;
+								firstButton?.focus();
+							} else if (event.key == "End") {
+								const lastButton:
+									| HTMLButtonElement
+									| null
+									| undefined = refs.floating.current
+									?.firstElementChild as HTMLButtonElement;
+								lastButton?.focus();
+							} else if (
+								event.key == "Left Arrow" ||
+								event.key == "Down Arrow"
+							) {
+								const prev:
+									| HTMLButtonElement
+									| null
+									| undefined = document.activeElement
+									?.previousElementSibling as HTMLButtonElement;
+								prev?.focus();
+							} else if (
+								event.key == "Right Arrow" ||
+								event.key == "Up Arrow"
+							) {
+								const next:
+									| HTMLButtonElement
+									| null
+									| undefined = document.activeElement
+									?.nextElementSibling as HTMLButtonElement;
+								next?.focus();
+							}
 						}}
-						transition={{ duration: 0.2, ease: "backOut" }}
-						onAnimationComplete={() => {
-							// only one piece can call finishAnimation
-							// this works for now
+						style={floatingStyles}
+						ref={refs.setFloating}
+					>
+						{props.movesThatEndHere.map(([move, idx]) => {
 							if (
-								animateScale.length == 1 &&
-								animateX.length == 2
+								move.moveType.type != "promotion" ||
+								!props.selectedPiece
 							)
-								props.finishAnimation();
-						}}
-						alt={`${props.piece.owner} ${props.piece.pieceType.type}`}
-						src={`/pieces/${props.piece.owner}/${props.piece.pieceType.type}.svg`}
-					/>
-				)}
-			</motion.div>
-		</motion.button>
+								return <></>;
+							return (
+								<motion.button
+									key={idx}
+									tabIndex={-1}
+									role="menuitem"
+									onTap={() => {
+										setOpen(false);
+										props.sendTurn(
+											props.selectedPieceIdx,
+											idx,
+										);
+									}}
+								>
+									<img
+										src={pieceImage({
+											pieceType: move.moveType.into,
+											owner: props.selectedPiece.owner,
+										})}
+										alt={`promote to ${pieceHumanName(move.moveType.into.type)}`}
+									/>
+								</motion.button>
+							);
+						})}
+					</motion.div>
+				) : undefined}
+			</div>
+		</>
 	);
+}
+
+function pieceHumanName(name: string): string {
+	// convert camelCase to spaced case
+	return name
+		.replaceAll(/([A-Z])/g, " $1")
+		.toLowerCase()
+		.trim();
+}
+
+function pieceImage(piece: Piece): string {
+	return `/pieces/${piece.owner}/${piece.pieceType.type}.svg`;
 }
 
 function Chat(props: { messages: string[]; sendMessage: (m: string) => void }) {

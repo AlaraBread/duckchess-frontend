@@ -38,13 +38,24 @@ export interface GameData {
 
 export type Player = "white" | "black";
 
+export type Vec2 = [number, number];
+
 export interface Move {
 	moveType: MoveType;
-	from: [number, number];
-	to: [number, number];
+	from: Vec2;
+	to: Vec2;
 }
 
-type MoveType = "jumpingMove" | "slidingMove";
+export type MoveType =
+	| { type: "jumpingMove" }
+	| { type: "slidingMove" }
+	| { type: "promotion"; into: PieceType };
+
+export interface Moves {
+	turn: Player;
+	pieces: Vec2[];
+	moves: Move[][];
+}
 
 type WebsocketEvent =
 	| { type: "selfInfo"; id: number }
@@ -57,8 +68,8 @@ type WebsocketEvent =
 	| {
 			type: "turnStart";
 			turn: Player;
-			movePieces: [number, number][];
-			moves: [number, number][][];
+			movePieces: Vec2[];
+			moves: Move[][];
 	  }
 	| { type: "chatMessage"; id: number; message: string }
 	| { type: "end"; winner: Player };
@@ -81,14 +92,7 @@ export function useMatch() {
 	}, [hasFired, findMatch]);
 	const [gameData, setGameData] = useState<GameData | undefined>(undefined);
 	const [ownId, setOwnId] = useState<number | undefined>(undefined);
-	const [moves, setMoves] = useState<
-		| {
-				turn: Player;
-				pieces: [number, number][];
-				moves: [number, number][][];
-		  }
-		| undefined
-	>(undefined);
+	const [moves, setMoves] = useState<Moves | undefined>(undefined);
 	const [boardAnimations, setBoardAnimations] = useState<Move[]>();
 	const player: Player =
 		ownId == gameData?.board?.whitePlayer ? "white" : "black";
@@ -199,9 +203,12 @@ export function useMatch() {
 			if (gameData && gameData.board) {
 				const from = move.from;
 				const to = move.to;
-				gameData.board.board[to[1]][to[0]].piece =
-					gameData.board.board[from[1]][from[0]].piece;
+				const piece = gameData.board.board[from[1]][from[0]].piece;
+				gameData.board.board[to[1]][to[0]].piece = piece;
 				gameData.board.board[from[1]][from[0]].piece = undefined;
+				if (piece && move.moveType.type == "promotion") {
+					piece.pieceType.type = move.moveType.into.type;
+				}
 				setGameData({ ...gameData });
 			}
 		},
