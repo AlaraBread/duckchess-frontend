@@ -47,10 +47,9 @@ export function useLocalStorage<T>(
 				return undefined as unknown as T;
 			}
 
-			const defaultValue =
-				initialValue instanceof Function
-					? initialValue()
-					: initialValue;
+			const defaultValue = initialValue instanceof Function
+				? initialValue()
+				: initialValue;
 
 			let parsed: unknown;
 			try {
@@ -68,8 +67,9 @@ export function useLocalStorage<T>(
 	// Get from local storage then
 	// parse stored json or return initialValue
 	const readValue = useCallback((): T => {
-		const initialValueToUse =
-			initialValue instanceof Function ? initialValue() : initialValue;
+		const initialValueToUse = initialValue instanceof Function
+			? initialValue()
+			: initialValue;
 
 		// Prevent build error "window is undefined" but keep working
 		if (IS_SERVER) {
@@ -105,8 +105,9 @@ export function useLocalStorage<T>(
 
 		try {
 			// Allow value to be a function so we have the same API as useState
-			const newValue =
-				value instanceof Function ? value(readValue()) : value;
+			const newValue = value instanceof Function
+				? value(readValue())
+				: value;
 
 			// Save to local storage
 			window.localStorage.setItem(key, serializer(newValue));
@@ -129,8 +130,9 @@ export function useLocalStorage<T>(
 			);
 		}
 
-		const defaultValue =
-			initialValue instanceof Function ? initialValue() : initialValue;
+		const defaultValue = initialValue instanceof Function
+			? initialValue()
+			: initialValue;
 
 		// Remove the key from local storage
 		window.localStorage.removeItem(key);
@@ -167,5 +169,16 @@ export function useLocalStorage<T>(
 	// See: useLocalStorage()
 	useEventListener("local-storage", handleStorageChange);
 
-	return [storedValue, setValue, removeValue];
+	const [firstRender, setFirstRender] = useState(true);
+	useEffect(() => {
+		setFirstRender(false);
+	}, []);
+	const initialValueToUse = initialValue instanceof Function
+		? initialValue()
+		: initialValue;
+	return [
+		firstRender ? initialValueToUse : storedValue,
+		setValue,
+		removeValue,
+	];
 }

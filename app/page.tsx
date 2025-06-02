@@ -18,7 +18,7 @@ export default function Home() {
 			<button
 				className="button"
 				onClick={() => {
-					router.push("/play");
+					router.push("/board-setup");
 				}}
 			>
 				play

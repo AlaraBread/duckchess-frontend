@@ -3,7 +3,6 @@
 import { useRouter } from "next/navigation";
 import loadingStyles from "../loading.module.css";
 import styles from "./play.module.css";
-import { GameData, useMatch, Piece, Tile, Player, Move, Moves } from "./match";
 import {
 	RefObject,
 	useCallback,
@@ -15,12 +14,21 @@ import {
 } from "react";
 import { motion, PanInfo } from "motion/react";
 import { flip, shift, useFloating } from "@floating-ui/react-dom";
+import {
+	ChatMessage,
+	GameData,
+	Move,
+	Moves,
+	Piece,
+	Player,
+	Tile,
+	useGame,
+} from "../game_provider";
+import { boardSetupIsValid } from "../board-setup/page";
 
 export default function Play() {
 	const {
-		gameId,
 		error,
-		findMatch,
 		gameData,
 		sendChatMessage,
 		moves,
@@ -30,15 +38,22 @@ export default function Play() {
 		boardAnimations,
 		setBoardAnimations,
 		applyMove,
-	} = useMatch();
+		setShouldConnect,
+	} = useGame();
+	const router = useRouter();
+	useEffect(() => {
+		if (typeof window === "undefined") {
+			return;
+		}
+		const boardSetupRaw = localStorage.getItem("boardSetup");
+		if (!boardSetupRaw || !boardSetupIsValid(JSON.parse(boardSetupRaw))) {
+			router.push("/board-setup");
+		}
+		setShouldConnect(true);
+	}, [router, setShouldConnect]);
 	if (!gameData || !gameData.board) {
 		return (
-			<Matchmaking
-				gameId={gameId}
-				error={error}
-				findMatch={findMatch}
-				gameData={gameData}
-			/>
+			<Matchmaking error={error} setShouldConnect={setShouldConnect} />
 		);
 	}
 	return (
@@ -58,12 +73,10 @@ export default function Play() {
 
 function Matchmaking(props: {
 	error: string | undefined;
-	findMatch: () => void;
-	gameId: number | undefined;
-	gameData: GameData | undefined;
+	setShouldConnect: (shouldConnect: boolean) => void;
 }) {
 	const router = useRouter();
-	const { error, findMatch, gameId } = props;
+	const { error, setShouldConnect } = props;
 	return (
 		<div className="centerContainer">
 			{error ? (
@@ -79,7 +92,7 @@ function Matchmaking(props: {
 					<button
 						className="button"
 						onClick={() => {
-							findMatch();
+							setShouldConnect(true);
 						}}
 					>
 						try again
@@ -87,11 +100,7 @@ function Matchmaking(props: {
 				</>
 			) : (
 				<>
-					<h1>
-						{gameId == undefined
-							? "looking for a match..."
-							: `in game #${gameId}, waiting for opponent...`}
-					</h1>
+					<h1>waiting for an opponent...</h1>
 					<div className="grow" />
 					<img
 						alt="loading"
@@ -131,6 +140,7 @@ function Game(props: {
 			<Chat
 				messages={props.gameData.chat}
 				sendMessage={props.sendChatMessage}
+				gameData={props.gameData}
 			/>
 		</div>
 	);
@@ -348,14 +358,9 @@ function TileContents(props: {
 		if (o) {
 			const firstButton: HTMLButtonElement | null | undefined = refs
 				.floating.current?.firstElementChild as HTMLButtonElement;
-			console.log("setting to open", firstButton);
 			props.setOpen(props.coords);
 			firstButton?.focus();
 		} else {
-			console.log(
-				"setting to closed",
-				props.tileButtons[props.coords[1]][props.coords[0]].current,
-			);
 			props.tileButtons[props.coords[1]][
 				props.coords[0]
 			].current?.focus();
@@ -418,7 +423,6 @@ function TileContents(props: {
 			props.sendTurn(props.selectedPieceIdx, moves[0][1]);
 		} else if (moves.length > 1) {
 			// open dialog to pick move
-			console.log("opening from drag");
 			props.setOpen([targetX, targetY]);
 		}
 	}
@@ -438,24 +442,20 @@ function TileContents(props: {
 				onTap={() => {
 					if (props.canMoveHere) {
 						if (props.movesThatEndHere.length == 1) {
-							console.log("moving from tap");
 							props.sendTurn(
 								props.selectedPieceIdx,
 								props.movesThatEndHere[0][1],
 							);
 						} else if (props.movesThatEndHere.length > 1) {
-							console.log("opening from tap");
 							setOpen(!isOpen);
 						}
 					} else if (props.isSelectable) {
-						console.log("selecting from tap");
 						props.setSelected(
 							props.isSelected && !isDragged
 								? undefined
 								: props.coords,
 						);
 					} else {
-						console.log("tapped outside");
 						props.setSelected(undefined);
 					}
 				}}
@@ -643,7 +643,10 @@ function TileContents(props: {
 	);
 }
 
-function pieceHumanName(name: string): string {
+export function pieceHumanName(name: string | undefined): string {
+	if (name == undefined) {
+		return "empty";
+	}
 	// convert camelCase to spaced case
 	return name
 		.replaceAll(/([A-Z])/g, " $1")
@@ -651,12 +654,16 @@ function pieceHumanName(name: string): string {
 		.trim();
 }
 
-function pieceImage(piece: Piece): string {
+export function pieceImage(piece: Piece): string {
 	return `/pieces/${piece.owner}/${piece.pieceType.type}.svg`;
 }
 
-function Chat(props: { messages: string[]; sendMessage: (m: string) => void }) {
-	const { sendMessage, messages } = props;
+function Chat(props: {
+	messages: ChatMessage[];
+	sendMessage: (m: string) => void;
+	gameData: GameData;
+}) {
+	const { sendMessage, messages, gameData } = props;
 	const [inputText, setInputText] = useState("");
 	function handleSendMessage() {
 		if (inputText == "") {
@@ -685,12 +692,15 @@ function Chat(props: { messages: string[]; sendMessage: (m: string) => void }) {
 					>
 						{messages.map((message, i) => (
 							<section role="region" key={i}>
-								{message}
+								{gameData.board?.whitePlayer == message.id
+									? "white"
+									: "black"}
+								: {message.message}
 							</section>
 						))}
 					</div>
 				),
-				[messages],
+				[messages, gameData.board?.whitePlayer],
 			)}
 			<div className={styles.chatInput}>
 				<input

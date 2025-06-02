@@ -2,6 +2,7 @@
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useTernaryDarkMode } from "./hooks/ternary_dark_mode";
+import { GameProvider } from "./game_provider";
 
 const queryClient = new QueryClient();
 
@@ -20,7 +21,7 @@ export function LayoutClient({
 		>
 			<body>
 				<QueryClientProvider client={queryClient}>
-					{children}
+					<GameProvider>{children}</GameProvider>
 				</QueryClientProvider>
 			</body>
 		</html>

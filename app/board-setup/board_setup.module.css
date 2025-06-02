@@ -1,0 +1,59 @@
+.pieceSelector {
+	display: flex;
+	flex-wrap: wrap;
+	max-width: calc(80px * 8);
+	margin: 32px auto;
+}
+
+.pieceSelector input {
+	display: none;
+}
+
+.pieceSelector label {
+	font-size: 0;
+	width: 80px;
+	height: 80px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 0;
+	position: relative;
+}
+
+.pieceSelector label {
+	background-color: var(--button);
+	transition: background 0.1s ease-out;
+}
+.pieceSelector label.selected {
+	background-color: var(--button-hover);
+}
+
+.pieceSelector img {
+	position: absolute;
+}
+
+.setupTile button {
+	width: 100%;
+	height: 100%;
+	font-size: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.setupTile img {
+	position: absolute;
+}
+
+.feedback {
+	margin: auto;
+	margin-top: 32px;
+	max-width: 40ch;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+}
+
+.feedback button {
+	margin-top: 32px;
+}
