@@ -14,33 +14,12 @@ import {
 } from "react";
 import { motion, PanInfo } from "motion/react";
 import { flip, shift, useFloating } from "@floating-ui/react-dom";
-import {
-	ChatMessage,
-	GameData,
-	Move,
-	Moves,
-	Piece,
-	Player,
-	Tile,
-	useGame,
-} from "../game_provider";
+import { Move, Moves, Piece, Player, Tile, useGame } from "../game_provider";
 import { boardSetupIsValid } from "../board-setup/page";
+import { pieceHumanName, pieceImage } from "../util";
 
 export default function Play() {
-	const {
-		error,
-		gameData,
-		sendChatMessage,
-		moves,
-		sendTurn,
-		player,
-		turn,
-		boardAnimations,
-		setBoardAnimations,
-		applyMove,
-		setShouldConnect,
-		winner,
-	} = useGame();
+	const { error, gameData, setShouldConnect } = useGame();
 	const router = useRouter();
 	useEffect(() => {
 		if (typeof window === "undefined") {
@@ -57,20 +36,7 @@ export default function Play() {
 			<Matchmaking error={error} setShouldConnect={setShouldConnect} />
 		);
 	}
-	return (
-		<Game
-			gameData={gameData}
-			moves={moves}
-			sendTurn={sendTurn}
-			sendChatMessage={sendChatMessage}
-			player={player}
-			turn={turn ?? "white"}
-			boardAnimations={boardAnimations}
-			setBoardAnimations={setBoardAnimations}
-			applyMove={applyMove}
-			winner={winner}
-		/>
-	);
+	return <Game />;
 }
 
 function Matchmaking(props: {
@@ -124,39 +90,22 @@ function Matchmaking(props: {
 	);
 }
 
-function Game(props: {
-	gameData: GameData;
-	sendChatMessage: (m: string) => void;
-	moves: Moves | undefined;
-	sendTurn: (pieceIdx: number, moveIdx: number) => void;
-	player: Player;
-	turn: Player;
-	boardAnimations: Move[] | undefined;
-	setBoardAnimations: (animations: Move[] | undefined) => void;
-	applyMove: (move: Move) => void;
-	winner: boolean | undefined;
-}) {
-	const { surrender } = useGame();
+function Game() {
+	const { surrender, winner, boardAnimations } = useGame();
 	return (
 		<div className={styles.game}>
-			<Board {...props} />
+			<Board />
 			<div className="grow" />
-			<Chat
-				messages={props.gameData.chat}
-				sendMessage={props.sendChatMessage}
-				gameData={props.gameData}
-			/>
+			<Chat />
 			<button
 				className={`button ${styles.surrenderButton}`}
 				onClick={surrender}
 			>
 				surrender
 			</button>
-			{props.winner != undefined &&
-				(props.boardAnimations == undefined ||
-					props.boardAnimations.length == 0) && (
-					<GameEnd winner={props.winner} />
-				)}
+			{winner != undefined &&
+				(boardAnimations == undefined ||
+					boardAnimations.length == 0) && <GameEnd winner={winner} />}
 		</div>
 	);
 }
@@ -185,17 +134,17 @@ function GameEnd(props: { winner: boolean }) {
 	);
 }
 
-function Board(props: {
-	gameData: GameData;
-	turn: Player;
-	moves: Moves | undefined;
-	sendTurn: (pieceIdx: number, moveIdx: number) => void;
-	player: Player;
-	boardAnimations: Move[] | undefined;
-	setBoardAnimations: (animations: Move[] | undefined) => void;
-	applyMove: (move: Move) => void;
-}) {
-	const { gameData } = props;
+function Board() {
+	const {
+		gameData,
+		turn,
+		player,
+		moves,
+		applyMove,
+		boardAnimations,
+		setBoardAnimations,
+		sendTurn,
+	} = useGame();
 	const [selected, setSelected] = useState<[number, number] | undefined>(
 		undefined,
 	);
@@ -206,7 +155,7 @@ function Board(props: {
 		}
 	}, [selected]);
 	const selectedPiece =
-		gameData.board && selected != undefined
+		gameData?.board && selected != undefined
 			? gameData.board.board[selected[1]][selected[0]].piece
 			: undefined;
 	const boardRef = useRef<HTMLTableElement>(null);
@@ -216,11 +165,10 @@ function Board(props: {
 		[...Array(8).keys()].map((_) => useRef<HTMLButtonElement>(null)),
 	);
 	useEffect(() => {
-		if (props.turn != props.player || !props.moves) {
+		if (turn != player || !moves) {
 			setSelected(undefined);
 		}
-	}, [props.moves, props.player, props.turn, setSelected]);
-	const { boardAnimations, setBoardAnimations, applyMove } = props;
+	}, [moves, player, turn, setSelected]);
 	const [currentAnimation, setCurrentAnimation] = useState<
 		Move | undefined
 	>();
@@ -247,7 +195,7 @@ function Board(props: {
 			finishAnimation();
 		}
 	}, [currentAnimation, finishAnimation]);
-	if (!gameData.board) {
+	if (!gameData?.board) {
 		return <></>;
 	}
 	return (
@@ -259,7 +207,7 @@ function Board(props: {
 							<BoardTile
 								key={x}
 								tileButtons={tileButtons}
-								turn={props.turn}
+								turn={turn ?? "white"}
 								coords={[x, y]}
 								selected={selected}
 								setSelected={setSelected}
@@ -267,13 +215,13 @@ function Board(props: {
 								open={open}
 								setOpen={setOpen}
 								piece={tile.piece}
-								moves={props.moves}
+								moves={moves}
 								tile={tile}
 								sendTurn={(piece, move) => {
 									setSelected(undefined);
-									props.sendTurn(piece, move);
+									sendTurn(piece, move);
 								}}
-								player={props.player}
+								player={player}
 								boardRef={boardRef}
 								finishAnimation={finishAnimation}
 								currentAnimation={currentAnimation}
@@ -682,33 +630,15 @@ function TileContents(props: {
 	);
 }
 
-export function pieceHumanName(name: string | undefined): string {
-	if (name == undefined) {
-		return "empty";
-	}
-	// convert camelCase to spaced case
-	return name
-		.replaceAll(/([A-Z])/g, " $1")
-		.toLowerCase()
-		.trim();
-}
-
-export function pieceImage(piece: Piece): string {
-	return `/pieces/${piece.owner}/${piece.pieceType.type}.svg`;
-}
-
-function Chat(props: {
-	messages: ChatMessage[];
-	sendMessage: (m: string) => void;
-	gameData: GameData;
-}) {
-	const { sendMessage, messages, gameData } = props;
+function Chat() {
+	const { gameData, sendChatMessage } = useGame();
+	const messages = useMemo(() => gameData?.chat ?? [], [gameData?.chat]);
 	const [inputText, setInputText] = useState("");
 	function handleSendMessage() {
 		if (inputText == "") {
 			return;
 		}
-		sendMessage(inputText);
+		sendChatMessage(inputText);
 		setInputText("");
 	}
 	const chatMessages = useRef<HTMLDivElement | null>(null);
@@ -731,9 +661,9 @@ function Chat(props: {
 					>
 						{messages.map((message, i) => (
 							<section role="region" key={i}>
-								{gameData.board?.whitePlayer == message.id
+								{gameData?.board?.whitePlayer == message.id
 									? "white: "
-									: gameData.board?.blackPlayer == message.id
+									: gameData?.board?.blackPlayer == message.id
 										? "black: "
 										: ""}
 								{message.message}
@@ -743,8 +673,8 @@ function Chat(props: {
 				),
 				[
 					messages,
-					gameData.board?.whitePlayer,
-					gameData.board?.blackPlayer,
+					gameData?.board?.whitePlayer,
+					gameData?.board?.blackPlayer,
 				],
 			)}
 			<div className={styles.chatInput}>

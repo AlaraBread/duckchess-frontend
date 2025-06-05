@@ -1,4 +1,4 @@
-import { Board, Move, Moves, Player, Vec2 } from "./game_provider";
+import { Board, Move, Moves, Piece, Player, Vec2 } from "./game_provider";
 
 export function rotateBoard(player: Player, board: Board): Board {
 	if (player == "white") return board;
@@ -37,4 +37,19 @@ function rotateVec2(v: Vec2): Vec2 {
 	v[0] = 7 - v[0];
 	v[1] = 7 - v[1];
 	return v;
+}
+
+export function pieceHumanName(name: string | undefined): string {
+	if (name == undefined) {
+		return "empty";
+	}
+	// convert camelCase to spaced case
+	return name
+		.replaceAll(/([A-Z])/g, " $1")
+		.toLowerCase()
+		.trim();
+}
+
+export function pieceImage(piece: Piece): string {
+	return `/pieces/${piece.owner}/${piece.pieceType.type}.svg`;
 }

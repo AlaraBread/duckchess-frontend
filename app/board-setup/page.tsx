@@ -5,7 +5,7 @@ import { PieceType, pieceTypes, Vec2 } from "../game_provider";
 import playStyles from "../play/play.module.css";
 import styles from "./board_setup.module.css";
 import { AnimatePresence, motion } from "motion/react";
-import { pieceHumanName, pieceImage } from "../play/page";
+import { pieceHumanName, pieceImage } from "../util";
 import { useLocalStorage } from "../hooks/local_storage";
 import { useRouter } from "next/navigation";
 
