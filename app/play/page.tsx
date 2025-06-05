@@ -693,9 +693,11 @@ function Chat(props: {
 						{messages.map((message, i) => (
 							<section role="region" key={i}>
 								{gameData.board?.whitePlayer == message.id
-									? "white"
-									: "black"}
-								: {message.message}
+									? "white: "
+									: gameData.board?.blackPlayer == message.id
+										? "black: "
+										: ""}
+								{message.message}
 							</section>
 						))}
 					</div>
