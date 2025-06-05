@@ -39,6 +39,7 @@ export default function Play() {
 		setBoardAnimations,
 		applyMove,
 		setShouldConnect,
+		winner,
 	} = useGame();
 	const router = useRouter();
 	useEffect(() => {
@@ -67,6 +68,7 @@ export default function Play() {
 			boardAnimations={boardAnimations}
 			setBoardAnimations={setBoardAnimations}
 			applyMove={applyMove}
+			winner={winner}
 		/>
 	);
 }
@@ -132,6 +134,7 @@ function Game(props: {
 	boardAnimations: Move[] | undefined;
 	setBoardAnimations: (animations: Move[] | undefined) => void;
 	applyMove: (move: Move) => void;
+	winner: boolean | undefined;
 }) {
 	return (
 		<div className={styles.game}>
@@ -142,7 +145,32 @@ function Game(props: {
 				sendMessage={props.sendChatMessage}
 				gameData={props.gameData}
 			/>
+			{props.winner != undefined && <GameEnd winner={props.winner} />}
 		</div>
+	);
+}
+
+function GameEnd(props: { winner: boolean }) {
+	const router = useRouter();
+	const { resetGame } = useGame();
+	const dialog = useRef<HTMLDialogElement>(null);
+	useEffect(() => {
+		dialog.current?.showModal();
+	}, []);
+	return (
+		<dialog ref={dialog} className={styles.gameEndDialog}>
+			<h1>{props.winner ? "you win" : "you lose"}</h1>
+			<div className="grow" />
+			<button
+				className="button"
+				onClick={() => {
+					resetGame();
+					router.push("/");
+				}}
+			>
+				main menu
+			</button>
+		</dialog>
 	);
 }
 

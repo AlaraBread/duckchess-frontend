@@ -1,6 +1,7 @@
 :root {
 	--background-light: #ffecd1;
 	--background-2-light: #ecca9a;
+	--background-translucent-light: #ecca9ac7;
 	--foreground-light: #342112;
 	--button-text-light: #ffecd1;
 	--button-light: #664727;
@@ -9,6 +10,7 @@
 
 	--background-dark: #342112;
 	--background-2-dark: #52341e;
+	--background-translucent-dark: #52341ec7;
 	--foreground-dark: #ffecd1;
 	--button-text-dark: #ffecd1;
 	--button-dark: #664727;
@@ -20,6 +22,7 @@
 :root[data-theme="light"] {
 	--background: var(--background-light);
 	--background-2: var(--background-2-light);
+	--background-translucent: var(--background-translucent-light);
 	--foreground: var(--foreground-light);
 	--button-text: var(--button-text-light);
 	--button: var(--button-light);
@@ -31,6 +34,7 @@
 	:root {
 		--background: var(--background-dark);
 		--background-2: var(--background-2-dark);
+		--background-translucent: var(--background-translucent-dark);
 		--foreground: var(--foreground-dark);
 		--button-text: var(--button-text-dark);
 		--button: var(--button-dark);
@@ -42,6 +46,7 @@
 :root[data-theme="dark"] {
 	--background: var(--background-dark);
 	--background-2: var(--background-2-dark);
+	--background-translucent: var(--background-translucent-dark);
 	--foreground: var(--foreground-dark);
 	--button-text: var(--button-text-dark);
 	--button: var(--button-dark);

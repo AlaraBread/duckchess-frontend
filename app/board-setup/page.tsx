@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { PieceType, pieceTypes, useGame, Vec2 } from "../game_provider";
+import { PieceType, pieceTypes, Vec2 } from "../game_provider";
 import playStyles from "../play/play.module.css";
 import styles from "./board_setup.module.css";
 import { AnimatePresence, motion } from "motion/react";
@@ -84,7 +84,6 @@ export default function BoardSetup() {
 	const totalValue = setupTotalValue(setup);
 	const numKings = setupNumKings(setup);
 	const isValid = boardSetupIsValid(setup);
-	const { setShouldConnect } = useGame();
 	const router = useRouter();
 	return (
 		<>
@@ -113,7 +112,6 @@ export default function BoardSetup() {
 					<button
 						className="button"
 						onClick={() => {
-							setShouldConnect(true);
 							router.push("/play");
 						}}
 					>

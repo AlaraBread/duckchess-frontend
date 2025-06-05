@@ -96,9 +96,11 @@ interface GameContext {
 	sendTurn: (pieceIdx: number, moveIdx: number) => void;
 	player: Player;
 	turn: Player | undefined;
+	winner: boolean | undefined;
 	boardAnimations: Move[] | undefined;
 	setBoardAnimations: (boardAnimations: Move[] | undefined) => void;
 	applyMove: (move: Move) => void;
+	resetGame: () => void;
 	setShouldConnect: (shouldConnect: boolean) => void;
 }
 
@@ -122,6 +124,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 		undefined,
 	);
 	const [shouldConnect, setShouldConnect] = useState(false);
+	const [winner, setWinner] = useState<undefined | UserId>(undefined);
 	const { sendJsonMessage } = useWebSocket(
 		`http://localhost:8000/`,
 		{
@@ -137,8 +140,10 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 			},
 			onClose: (event) => {
 				setWebsocketError(event.reason);
-				setGameData(undefined);
-				setMoves(undefined);
+				if (winner == undefined) {
+					setGameData(undefined);
+					setMoves(undefined);
+				}
 			},
 			onError: (error) => {
 				console.log("websocket error: ", error);
@@ -186,9 +191,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 						);
 						break;
 					case "end":
-						setGameData(undefined);
-						setMoves(undefined);
-						router.push("/");
+						setShouldConnect(false);
+						setWinner(data.winner);
 						break;
 					case "chatMessage":
 						if (gameData != undefined) {
@@ -225,6 +229,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 		},
 		player,
 		turn: moves?.turn,
+		winner: winner == undefined ? undefined : winner == login.data,
 		boardAnimations,
 		setBoardAnimations,
 		setShouldConnect,
@@ -242,6 +247,13 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 				}
 				setGameData({ ...gameData });
 			}
+		},
+		resetGame() {
+			setShouldConnect(false);
+			setWinner(undefined);
+			setGameData(undefined);
+			setMoves(undefined);
+			setWebsocketError(undefined);
 		},
 	};
 	return (

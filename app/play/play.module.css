@@ -115,3 +115,16 @@
 .promotionMenu[aria-hidden="true"] {
 	display: none;
 }
+
+.gameEndDialog {
+	margin: auto;
+	min-height: 300px;
+	min-width: 300px;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	padding: 32px 0;
+	border: dotted var(--foreground) 4px;
+	border-radius: 16px;
+	background: var(--background-translucent);
+}
