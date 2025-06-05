@@ -101,6 +101,7 @@ interface GameContext {
 	setBoardAnimations: (boardAnimations: Move[] | undefined) => void;
 	applyMove: (move: Move) => void;
 	resetGame: () => void;
+	surrender: () => void;
 	setShouldConnect: (shouldConnect: boolean) => void;
 }
 
@@ -247,6 +248,14 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 				}
 				setGameData({ ...gameData });
 			}
+		},
+		surrender() {
+			setWinner(
+				gameData?.board.whitePlayer == login.data
+					? gameData?.board.blackPlayer
+					: gameData?.board.whitePlayer,
+			);
+			sendJsonMessage({ type: "surrender" });
 		},
 		resetGame() {
 			setShouldConnect(false);

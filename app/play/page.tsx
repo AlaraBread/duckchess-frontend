@@ -136,6 +136,7 @@ function Game(props: {
 	applyMove: (move: Move) => void;
 	winner: boolean | undefined;
 }) {
+	const { surrender } = useGame();
 	return (
 		<div className={styles.game}>
 			<Board {...props} />
@@ -145,7 +146,17 @@ function Game(props: {
 				sendMessage={props.sendChatMessage}
 				gameData={props.gameData}
 			/>
-			{props.winner != undefined && <GameEnd winner={props.winner} />}
+			<button
+				className={`button ${styles.surrenderButton}`}
+				onClick={surrender}
+			>
+				surrender
+			</button>
+			{props.winner != undefined &&
+				(props.boardAnimations == undefined ||
+					props.boardAnimations.length == 0) && (
+					<GameEnd winner={props.winner} />
+				)}
 		</div>
 	);
 }
@@ -730,7 +741,11 @@ function Chat(props: {
 						))}
 					</div>
 				),
-				[messages, gameData.board?.whitePlayer],
+				[
+					messages,
+					gameData.board?.whitePlayer,
+					gameData.board?.blackPlayer,
+				],
 			)}
 			<div className={styles.chatInput}>
 				<input
