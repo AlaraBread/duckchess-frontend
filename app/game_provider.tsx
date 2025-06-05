@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { createContext, useContext, useState } from "react";
 import useWebSocket from "react-use-websocket";
+import { rotateBoard, rotateMove, rotateMoves } from "./util";
 
 export type FloorType = "light" | "dark";
 
@@ -150,33 +151,44 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 				console.log("got message: ", data);
 				switch (data.type) {
 					case "gameState":
+						const dataPlayer =
+							data.board.whitePlayer == login.data
+								? "white"
+								: "black";
 						setGameData({
 							chat: gameData?.chat ?? [],
-							board: data.board,
+							board: rotateBoard(dataPlayer, data.board),
 						});
-						setMoves({
-							turn: data.board.turn,
-							moves: data.board.moves,
-							pieces: data.board.movePieces,
-						});
+						setMoves(
+							rotateMoves(dataPlayer, {
+								turn: data.board.turn,
+								moves: data.board.moves,
+								pieces: data.board.movePieces,
+							}),
+						);
 						break;
 					case "turnStart":
 						if (!gameData) break;
 						setGameData({ ...gameData });
-						setMoves({
-							turn: data.turn,
-							moves: data.moves,
-							pieces: data.movePieces,
-						});
+						setMoves(
+							rotateMoves(player, {
+								turn: data.turn,
+								moves: data.moves,
+								pieces: data.movePieces,
+							}),
+						);
 						break;
 					case "move":
 						setBoardAnimations(
-							data.moves.filter((move) => move.from[0] >= 0),
+							data.moves
+								.filter((move) => move.from[0] >= 0)
+								.map(rotateMove.bind(undefined, player)),
 						);
 						break;
 					case "end":
 						setGameData(undefined);
 						setMoves(undefined);
+						router.push("/");
 						break;
 					case "chatMessage":
 						if (gameData != undefined) {
