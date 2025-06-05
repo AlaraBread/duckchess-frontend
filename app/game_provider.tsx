@@ -151,6 +151,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 				setWebsocketError("websocket error");
 				setGameData(undefined);
 				setMoves(undefined);
+				setShouldConnect(false);
 			},
 			onMessage: (event) => {
 				const data: WebsocketEvent = JSON.parse(event.data);

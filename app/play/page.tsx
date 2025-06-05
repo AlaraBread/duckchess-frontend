@@ -32,19 +32,14 @@ export default function Play() {
 		setShouldConnect(true);
 	}, [router, setShouldConnect]);
 	if (!gameData || !gameData.board) {
-		return (
-			<Matchmaking error={error} setShouldConnect={setShouldConnect} />
-		);
+		return <Matchmaking error={error} />;
 	}
 	return <Game />;
 }
 
-function Matchmaking(props: {
-	error: string | undefined;
-	setShouldConnect: (shouldConnect: boolean) => void;
-}) {
+function Matchmaking(props: { error: string | undefined }) {
 	const router = useRouter();
-	const { error, setShouldConnect } = props;
+	const { error } = props;
 	return (
 		<div className="centerContainer">
 			{error ? (
@@ -60,7 +55,7 @@ function Matchmaking(props: {
 					<button
 						className="button"
 						onClick={() => {
-							setShouldConnect(true);
+							location.reload();
 						}}
 					>
 						try again
