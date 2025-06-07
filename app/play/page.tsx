@@ -14,7 +14,15 @@ import {
 } from "react";
 import { motion, PanInfo } from "motion/react";
 import { flip, shift, useFloating } from "@floating-ui/react-dom";
-import { Move, Moves, Piece, Player, Tile, useGame } from "../game_provider";
+import {
+	Move,
+	Moves,
+	Piece,
+	Player,
+	Tile,
+	Timer,
+	useGame,
+} from "../game_provider";
 import { boardSetupIsValid } from "../board-setup/page";
 import { pieceHumanName, pieceImage } from "../util";
 
@@ -44,7 +52,7 @@ function Matchmaking(props: { error: string | undefined }) {
 		<div className="centerContainer">
 			{error ? (
 				<>
-					<h1>something went wrong</h1>
+					<h1>{error}</h1>
 					<div className="grow" />
 					<img
 						alt="loading"
@@ -92,6 +100,7 @@ function Game() {
 			<Board />
 			<div className="grow" />
 			<Chat />
+			<ChessClock />
 			<button
 				className={`button ${styles.surrenderButton}`}
 				onClick={surrender}
@@ -101,6 +110,38 @@ function Game() {
 			{winner != undefined &&
 				(boardAnimations == undefined ||
 					boardAnimations.length == 0) && <GameEnd winner={winner} />}
+		</div>
+	);
+}
+
+function ChessClock() {
+	const { gameData } = useGame();
+	const [time, setTime] = useState<number | undefined>(undefined);
+	useEffect(() => {
+		const interval = window.setInterval(() => {
+			setTime(Date.now());
+		}, 500);
+		return clearInterval.bind(undefined, interval);
+	}, [setTime]);
+	if (!gameData || !time) return <></>;
+	const clock = gameData.clock;
+	function formatClock(time: number, timer: Timer): string {
+		switch (timer.type) {
+			case "paused":
+				return timer.timeRemaining.toString() + "s";
+			case "running":
+				return (
+					Math.max(
+						Math.floor(timer.endTime - time / 1000),
+						0,
+					).toString() + "s"
+				);
+		}
+	}
+	return (
+		<div>
+			<p>white: {formatClock(time, clock.white)}</p>
+			<p>black: {formatClock(time, clock.black)}</p>
 		</div>
 	);
 }

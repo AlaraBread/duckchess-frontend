@@ -39,7 +39,17 @@ export interface Board {
 export interface GameData {
 	board: Board;
 	chat: ChatMessage[];
+	clock: ChessClock;
 }
+
+export type ChessClock = Record<Player, Timer>;
+
+export type Timer =
+	| {
+			type: "paused";
+			timeRemaining: number;
+	  }
+	| { type: "running"; endTime: number };
 
 export type Player = "white" | "black";
 
@@ -69,12 +79,14 @@ type WebsocketEvent =
 	| {
 			type: "gameState";
 			board: Board & { moves: Move[][]; movePieces: Vec2[] };
+			clock: ChessClock;
 	  }
 	| {
 			type: "turnStart";
 			turn: Player;
 			movePieces: Vec2[];
 			moves: Move[][];
+			clock: ChessClock;
 	  }
 	| { type: "chatMessage"; message: ChatMessage }
 	| { type: "move"; moves: Move[] }
@@ -165,6 +177,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 						setGameData({
 							chat: gameData?.chat ?? [],
 							board: rotateBoard(dataPlayer, data.board),
+							clock: data.clock,
 						});
 						setMoves(
 							rotateMoves(dataPlayer, {
@@ -176,7 +189,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 						break;
 					case "turnStart":
 						if (!gameData) break;
-						setGameData({ ...gameData });
+						setGameData({ ...gameData, clock: data.clock });
 						setMoves(
 							rotateMoves(player, {
 								turn: data.turn,
