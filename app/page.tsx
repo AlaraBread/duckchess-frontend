@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import styles from "./page.module.css";
-import { ThemeSelector } from "./theme_selector";
+import { Settings } from "./settings";
 
 export default function Home() {
 	const router = useRouter();
@@ -24,7 +24,7 @@ export default function Home() {
 				play
 			</button>
 			<div className="grow" />
-			<ThemeSelector />
+			<Settings />
 		</div>
 	);
 }

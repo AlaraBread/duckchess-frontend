@@ -25,6 +25,7 @@ import {
 } from "../game_provider";
 import { boardSetupIsValid } from "../board-setup/page";
 import { pieceHumanName, pieceImage } from "../util";
+import { useLocalStorage } from "../hooks/local_storage";
 
 export default function Play() {
 	const { error, gameData, setShouldConnect } = useGame();
@@ -95,13 +96,14 @@ function Matchmaking(props: { error: string | undefined }) {
 
 function Game() {
 	const { winner, boardAnimations } = useGame();
+	const [chatEnabled] = useLocalStorage("chatEnabled", true);
 	return (
 		<div className={styles.game}>
 			<div className={styles.boardContainer}>
 				<Board />
 				<ChessClock />
 			</div>
-			<Chat />
+			{chatEnabled && <Chat />}
 			{winner != undefined &&
 				(boardAnimations == undefined ||
 					boardAnimations.length == 0) && <GameEnd winner={winner} />}
