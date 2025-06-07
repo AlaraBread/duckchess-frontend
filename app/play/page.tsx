@@ -94,19 +94,14 @@ function Matchmaking(props: { error: string | undefined }) {
 }
 
 function Game() {
-	const { surrender, winner, boardAnimations } = useGame();
+	const { winner, boardAnimations } = useGame();
 	return (
 		<div className={styles.game}>
-			<Board />
-			<div className="grow" />
+			<div className={styles.boardContainer}>
+				<Board />
+				<ChessClock />
+			</div>
 			<Chat />
-			<ChessClock />
-			<button
-				className={`button ${styles.surrenderButton}`}
-				onClick={surrender}
-			>
-				surrender
-			</button>
 			{winner != undefined &&
 				(boardAnimations == undefined ||
 					boardAnimations.length == 0) && <GameEnd winner={winner} />}
@@ -115,7 +110,7 @@ function Game() {
 }
 
 function ChessClock() {
-	const { gameData } = useGame();
+	const { gameData, surrender } = useGame();
 	const [time, setTime] = useState<number | undefined>(undefined);
 	useEffect(() => {
 		const interval = window.setInterval(() => {
@@ -126,22 +121,35 @@ function ChessClock() {
 	if (!gameData || !time) return <></>;
 	const clock = gameData.clock;
 	function formatClock(time: number, timer: Timer): string {
+		let seconds: number;
 		switch (timer.type) {
 			case "paused":
-				return timer.timeRemaining.toString() + "s";
+				seconds = timer.timeRemaining;
+				break;
 			case "running":
-				return (
-					Math.max(
-						Math.floor(timer.endTime - time / 1000),
-						0,
-					).toString() + "s"
-				);
+				seconds = Math.max(Math.floor(timer.endTime - time / 1000), 0);
+				break;
 		}
+		const minutes = Math.floor(seconds / 60);
+		seconds = Math.floor(seconds % 60);
+		return `${minutes.toLocaleString(undefined, { minimumIntegerDigits: 2 })}:${seconds.toLocaleString(undefined, { minimumIntegerDigits: 2 })}`;
 	}
 	return (
-		<div>
-			<p>white: {formatClock(time, clock.white)}</p>
-			<p>black: {formatClock(time, clock.black)}</p>
+		<div className={styles.chessClock}>
+			<p className={styles.whiteClock}>
+				<span style={{ fontSize: 0 }}>white: </span>
+				{formatClock(time, clock.white)}
+			</p>
+			<button
+				className={`button ${styles.surrenderButton}`}
+				onClick={surrender}
+			>
+				surrender
+			</button>
+			<p className={styles.blackClock}>
+				<span style={{ fontSize: 0 }}>black: </span>
+				{formatClock(time, clock.black)}
+			</p>
 		</div>
 	);
 }

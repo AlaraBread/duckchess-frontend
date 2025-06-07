@@ -176,7 +176,11 @@ function Board(props: {
 	setSetup: (s: (PieceType | undefined)[][]) => void;
 }) {
 	return (
-		<table aria-label="board setup" className={playStyles.board}>
+		<table
+			aria-label="board setup"
+			className={playStyles.board}
+			style={{ margin: "auto" }}
+		>
 			<tbody>
 				{[...Array(2).keys()].map((y) => (
 					<tr key={y}>
