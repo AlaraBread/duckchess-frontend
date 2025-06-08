@@ -121,7 +121,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 	const login = useQuery({
 		queryKey: ["login"],
 		queryFn: () =>
-			fetch("http://localhost:8000/login", {
+			fetch("http://api.alarabread.fun/duckchess/login", {
 				method: "GET",
 				credentials: "include",
 			}).then((response) => response.json() as Promise<UserId>),
@@ -139,7 +139,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 	const [shouldConnect, setShouldConnect] = useState(false);
 	const [winner, setWinner] = useState<undefined | UserId>(undefined);
 	const { sendJsonMessage } = useWebSocket(
-		`http://localhost:8000/`,
+		`http://api.alarabread.fun/duckchess`,
 		{
 			onOpen: () => {
 				setWebsocketError(undefined);
