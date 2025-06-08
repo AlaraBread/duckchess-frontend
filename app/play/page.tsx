@@ -23,9 +23,9 @@ import {
 	Timer,
 	useGame,
 } from "../game_provider";
-import { boardSetupIsValid } from "../board-setup/page";
 import { pieceHumanName, pieceImage } from "../util";
 import { useLocalStorage } from "../hooks/local_storage";
+import { boardSetupIsValid } from "../board-setup/setup";
 
 export default function Play() {
 	const { error, gameData, setShouldConnect } = useGame();

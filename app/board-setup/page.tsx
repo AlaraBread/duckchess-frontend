@@ -8,61 +8,18 @@ import { AnimatePresence, motion } from "motion/react";
 import { pieceHumanName, pieceImage } from "../util";
 import { useLocalStorage } from "../hooks/local_storage";
 import { useRouter } from "next/navigation";
+import {
+	boardSetupIsValid,
+	maxValue,
+	setupNumKings,
+	setupTotalValue,
+} from "./setup";
 
 const transition = {
 	type: "tween",
 	ease: "backOut",
 	duration: 0.1,
 };
-
-function pieceValue(piece: PieceType | undefined): number {
-	if (piece == undefined) return 0;
-	switch (piece.type) {
-		case "king":
-			return 400;
-		case "queen":
-			return 900;
-		case "castle":
-			return 500;
-		case "bishop":
-			return 300;
-		case "knight":
-			return 300;
-		case "pawn":
-			return 100;
-	}
-}
-
-const maxValue = 4800;
-function setupTotalValue(setup: (PieceType | undefined)[][]) {
-	return setup
-		.flatMap((row) => row.map((piece) => pieceValue(piece)))
-		.reduce((prev, next) => prev + next);
-}
-
-function setupNumKings(setup: (PieceType | undefined)[][]) {
-	return setup
-		.flatMap((row) =>
-			row.map((piece) =>
-				piece?.type == "king" ? (1 as number) : (0 as number),
-			),
-		)
-		.reduce((prev, next) => prev + next);
-}
-
-export function boardSetupIsValid(setup: (PieceType | undefined)[][]) {
-	const totalValue = setup
-		.flatMap((row) => row.map((piece) => pieceValue(piece)))
-		.reduce((prev, next) => prev + next);
-	const numKings = setup
-		.flatMap((row) =>
-			row.map((piece) =>
-				piece?.type == "king" ? (1 as number) : (0 as number),
-			),
-		)
-		.reduce((prev, next) => prev + next);
-	return numKings == 1 && totalValue <= maxValue;
-}
 
 export default function BoardSetup() {
 	const [selectedPiece, setSelectedPiece] = useState<PieceType | undefined>();
