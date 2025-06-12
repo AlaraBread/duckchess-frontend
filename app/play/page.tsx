@@ -195,11 +195,9 @@ function Board() {
 		undefined,
 	);
 	const [open, setOpen] = useState<[number, number] | undefined>(undefined);
-	useEffect(() => {
-		if (!selected) {
-			setOpen(undefined);
-		}
-	}, [selected]);
+	if (!selected && open) {
+		setOpen(undefined);
+	}
 	const selectedPiece =
 		gameData?.board && selected != undefined
 			? gameData.board.board[selected[1]][selected[0]].piece
@@ -210,11 +208,9 @@ function Board() {
 		// eslint-disable-next-line react-hooks/rules-of-hooks
 		[...Array(8).keys()].map((_) => useRef<HTMLButtonElement>(null)),
 	);
-	useEffect(() => {
-		if (turn != player || !moves) {
-			setSelected(undefined);
-		}
-	}, [moves, player, turn, setSelected]);
+	if ((turn != player || !moves) && selected) {
+		setSelected(undefined);
+	}
 	const [currentAnimation, setCurrentAnimation] = useState<
 		Move | undefined
 	>();
@@ -378,11 +374,9 @@ function TileContents(props: {
 		middleware: [flip(), shift()],
 	});
 	const [isDragged, setDragged] = useState(false);
-	useEffect(() => {
-		if (!props.isSelectable) {
-			setDragged(false);
-		}
-	}, [props.isSelectable]);
+	if (isDragged && !props.isSelectable) {
+		setDragged(false);
+	}
 	const isOpen =
 		!!props.open &&
 		props.open[0] == props.coords[0] &&
