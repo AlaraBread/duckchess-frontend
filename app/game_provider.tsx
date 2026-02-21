@@ -117,11 +117,13 @@ interface GameContext {
 	setShouldConnect: (shouldConnect: boolean) => void;
 }
 
+export const API_URL = "https://api.alarabread.fun:80/duckchess";
+
 export function GameProvider({ children }: { children: React.ReactNode }) {
 	const login = useQuery({
 		queryKey: ["login"],
 		queryFn: () =>
-			fetch("https://api.alarabread.fun:80/duckchess/login", {
+			fetch(`${API_URL}/login`, {
 				method: "GET",
 				credentials: "include",
 			}).then((response) => response.json() as Promise<UserId>),
@@ -139,7 +141,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 	const [shouldConnect, setShouldConnect] = useState(false);
 	const [winner, setWinner] = useState<undefined | UserId>(undefined);
 	const { sendJsonMessage } = useWebSocket(
-		`https://api.alarabread.fun:80/duckchess`,
+		API_URL,
 		{
 			onOpen: () => {
 				setWebsocketError(undefined);
