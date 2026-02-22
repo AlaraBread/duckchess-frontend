@@ -10,7 +10,7 @@ export default function Home() {
 		<div className="centerContainer">
 			<img
 				alt="duck chess icon"
-				src="/duck-icon.svg"
+				src="/pieces/white/duck.svg"
 				className={styles.logo}
 			/>
 			<h1>duck chess</h1>

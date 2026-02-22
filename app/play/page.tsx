@@ -57,7 +57,7 @@ function Matchmaking(props: { error: string | undefined }) {
 					<div className="grow" />
 					<img
 						alt="loading"
-						src="/duck-open.svg"
+						src="/pieces/black/duck.svg"
 						className={loadingStyles.loadingStopped}
 					/>
 					<div className="grow" />
@@ -76,7 +76,7 @@ function Matchmaking(props: { error: string | undefined }) {
 					<div className="grow" />
 					<img
 						alt="loading"
-						src="/duck-icon.svg"
+						src="/pieces/white/duck.svg"
 						className={loadingStyles.loading}
 					/>
 					<div className="grow" />

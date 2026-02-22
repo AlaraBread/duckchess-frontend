@@ -118,7 +118,7 @@ interface GameContext {
 	setShouldConnect: (shouldConnect: boolean) => void;
 }
 
-export const API_URL = "http://localhost:8000";
+export const API_URL = "https://api.alarabread.fun";
 
 export function GameProvider({ children }: { children: React.ReactNode }) {
 	const login = useQuery({

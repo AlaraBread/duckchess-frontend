@@ -6,7 +6,7 @@ export default function Loading() {
 			<div className="grow" />
 			<img
 				alt="loading"
-				src="/duck-icon.svg"
+				src="/pieces/white/duck.svg"
 				className={styles.loading}
 			/>
 			<div className="grow" />
