@@ -117,7 +117,7 @@ interface GameContext {
 	setShouldConnect: (shouldConnect: boolean) => void;
 }
 
-export const API_URL = "https://api.alarabread.fun:80/duckchess";
+export const API_URL = "https://duckchess.dabed.online";
 
 export function GameProvider({ children }: { children: React.ReactNode }) {
 	const login = useQuery({
