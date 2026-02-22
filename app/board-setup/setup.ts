@@ -16,6 +16,8 @@ function pieceValue(piece: PieceType | undefined): number {
 			return 300;
 		case "pawn":
 			return 100;
+		case "duck":
+			return 300;
 	}
 }
 

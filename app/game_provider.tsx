@@ -17,6 +17,7 @@ export const pieceTypes = [
 	{ type: "bishop" },
 	{ type: "knight" },
 	{ type: "pawn" },
+	{ type: "duck" },
 ] as const;
 
 export interface Piece {
@@ -117,7 +118,7 @@ interface GameContext {
 	setShouldConnect: (shouldConnect: boolean) => void;
 }
 
-export const API_URL = "https://api.alarabread.fun";
+export const API_URL = "http://localhost:8000";
 
 export function GameProvider({ children }: { children: React.ReactNode }) {
 	const login = useQuery({
@@ -169,7 +170,6 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 			},
 			onMessage: (event) => {
 				const data: WebsocketEvent = JSON.parse(event.data);
-				console.log("got message: ", data);
 				switch (data.type) {
 					case "gameState":
 						const dataPlayer =
